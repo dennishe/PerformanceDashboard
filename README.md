@@ -4,6 +4,8 @@ A macOS performance dashboard. Displays real-time gauges and sparklines for reso
 
 The app lives in the menu bar and opens a compact dashboard window on click.
 
+![PerformanceDashboard screenshot](Resources/Screenshot.png)
+
 ---
 
 ## Requirements
