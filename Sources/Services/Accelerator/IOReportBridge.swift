@@ -24,6 +24,12 @@ enum IOReport {
         return symbol.withCString { dlsym(lib, $0) }
     }
 
+    // MARK: – Cached function pointers
+    // `channelName` is called for every channel inside each `sampleDelta` loop;
+    // re-resolving via dlsym on every call showed up as 4 M+ cycles in profiling.
+    nonisolated(unsafe) private static let channelNamePtr: UnsafeMutableRawPointer? =
+        resolve("IOReportChannelGetChannelName")
+
     // MARK: – Public API
 
     /// Returns a mutable channel-list dictionary for `group` (and optionally `subgroup`).
@@ -85,7 +91,7 @@ enum IOReport {
     /// Falls back to `LegendChannel[2]` if the symbol is absent.
     static func channelName(_ channel: CFDictionary) -> String? {
         typealias FnPtr = @convention(c) (CFDictionary) -> Unmanaged<CFString>?
-        if let ptr = resolve("IOReportChannelGetChannelName") {
+        if let ptr = channelNamePtr {
             return unsafeBitCast(ptr, to: FnPtr.self)(channel)?.takeUnretainedValue() as String?
         }
         // Fallback: Apple stores the name at LegendChannel[2]

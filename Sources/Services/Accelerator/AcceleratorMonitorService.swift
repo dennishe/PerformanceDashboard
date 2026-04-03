@@ -34,11 +34,12 @@ public final class AcceleratorMonitorService: MetricMonitorProtocol {
     private func poll(continuation: AsyncStream<AcceleratorSnapshot>.Continuation) async {
         // State is local to this actor-isolated function — no shared-mutable-state concerns.
         #if arch(arm64)
-        var ane = ANEState.setUp()
+        PMPSampler.shared.setUp()
+        var ane = ANEState()
         #endif
         while !Task.isCancelled {
             #if arch(arm64)
-            continuation.yield(AcceleratorSnapshot(aneUsage: ane?.nextUsage()))
+            continuation.yield(AcceleratorSnapshot(aneUsage: ane.nextUsage()))
             #else
             continuation.yield(AcceleratorSnapshot(aneUsage: nil))
             #endif
@@ -50,7 +51,7 @@ public final class AcceleratorMonitorService: MetricMonitorProtocol {
 // MARK: – IOReport state (ARM64 only)
 
 #if arch(arm64)
-/// Encapsulates the IOReport subscription used to measure ANE activity.
+/// Extracts ANE utilisation from the shared `PMPSampler` delta.
 ///
 /// Energy-model delta values are normalised against a running maximum that starts
 /// at `initialMaxDelta` (calibrated for M1) and grows if a higher value is observed.
@@ -59,38 +60,13 @@ private struct ANEState {
     /// Starting normalisation ceiling. Grows if exceeded; fully adaptive.
     private static let initialMaxDelta: Double = 1
 
-    private let ref: IOReportSubscriptionRef
-    private let subscribedChannels: CFMutableDictionary
-    private var prevSample: CFDictionary?
     private var maxDelta: Double = ANEState.initialMaxDelta
-
-    // MARK: Setup
-
-    static func setUp() -> ANEState? {
-        // The "PMP" group contains an accessible "ANE" channel that returns 0 at
-        // idle and a positive counter value when the ANE is active.
-        guard let channels = IOReport.copyChannels(group: "PMP"),
-              let sub = IOReport.subscribe(channels: channels) else { return nil }
-        var state = ANEState(ref: sub.ref, channels: sub.subscribedChannels)
-        // Baseline sample — first real call will delta against this.
-        state.prevSample = IOReport.takeSample(sub.ref, channels: sub.subscribedChannels)
-        return state
-    }
-
-    private init(ref: IOReportSubscriptionRef, channels: CFMutableDictionary) {
-        self.ref = ref
-        self.subscribedChannels = channels
-    }
 
     // MARK: Sampling
 
-    /// Takes a new sample, computes the delta from the previous one, and returns
-    /// ANE utilisation as a fraction in [0, 1], or `nil` if no ANE channels found.
-    mutating func nextUsage() -> Double? {
-        let curr = IOReport.takeSample(ref, channels: subscribedChannels)
-        defer { prevSample = curr }
-        guard let prev = prevSample, let curr,
-              let delta = IOReport.sampleDelta(prev: prev, curr: curr) else { return nil }
+    /// Reads the next delta from PMPSampler and returns ANE utilisation in [0, 1].
+    @MonitorActor mutating func nextUsage() -> Double? {
+        guard let delta = PMPSampler.shared.nextDelta() else { return nil }
         return extractANE(from: delta)
     }
 

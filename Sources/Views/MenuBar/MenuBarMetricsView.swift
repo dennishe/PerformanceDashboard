@@ -13,14 +13,28 @@ struct MenuBarMetricsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            sectionHeader
             metricRows
             Divider()
             actionBar
         }
-        .frame(width: 220)
+        .frame(width: 240)
     }
 
     // MARK: - Sections
+
+    private var sectionHeader: some View {
+        HStack {
+            Text("PERFORMANCE")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .tracking(1.0)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 4)
+    }
 
     @ViewBuilder
     private var metricRows: some View {
@@ -64,6 +78,7 @@ struct MenuBarMetricsView: View {
     private func metricRow(_ icon: String, _ label: String, _ value: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .frame(width: 20)
             Text(label)
@@ -72,9 +87,10 @@ struct MenuBarMetricsView: View {
             Text(value)
                 .monospacedDigit()
                 .fontWeight(.medium)
+                .foregroundStyle(.primary)
         }
         .font(.callout)
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
     }
 }

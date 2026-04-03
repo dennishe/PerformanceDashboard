@@ -34,12 +34,13 @@ public final class MediaEngineMonitorService: MetricMonitorProtocol {
     @MonitorActor
     private func poll(continuation: AsyncStream<MediaEngineSnapshot>.Continuation) async {
         #if arch(arm64)
-        var state = MediaEngineState.setUp()
+        PMPSampler.shared.setUp()
+        let state = MediaEngineState()
         #endif
         while !Task.isCancelled {
             #if arch(arm64)
-            let snapshot = state?.nextSnapshot() ?? MediaEngineSnapshot(encodeMilliwatts: nil,
-                                                                        decodeMilliwatts: nil)
+            let snapshot = state.nextSnapshot()
+                ?? MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
             #else
             let snapshot = MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
             #endif
@@ -52,29 +53,12 @@ public final class MediaEngineMonitorService: MetricMonitorProtocol {
 // MARK: - IOReport state (Apple Silicon only)
 
 #if arch(arm64)
+/// Extracts AVE/VDEC power from the shared `PMPSampler` delta.
+/// The `AVE` (encoder) and `VDEC` (decoder) channels are in `PMP / Energy Counters`;
+/// values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
 private struct MediaEngineState {
-    private let ref: IOReportSubscriptionRef
-    private let channels: CFMutableDictionary
-    private var prevSample: CFDictionary?
-
-    static func setUp() -> MediaEngineState? {
-        guard let ch = IOReport.copyChannels(group: "PMP"),
-              let sub = IOReport.subscribe(channels: ch) else { return nil }
-        var state = MediaEngineState(ref: sub.ref, channels: sub.subscribedChannels)
-        state.prevSample = IOReport.takeSample(sub.ref, channels: sub.subscribedChannels)
-        return state
-    }
-
-    private init(ref: IOReportSubscriptionRef, channels: CFMutableDictionary) {
-        self.ref = ref
-        self.channels = channels
-    }
-
-    mutating func nextSnapshot() -> MediaEngineSnapshot? {
-        let curr = IOReport.takeSample(ref, channels: channels)
-        defer { prevSample = curr }
-        guard let prev = prevSample, let curr,
-              let delta = IOReport.sampleDelta(prev: prev, curr: curr) else { return nil }
+    @MonitorActor func nextSnapshot() -> MediaEngineSnapshot? {
+        guard let delta = PMPSampler.shared.nextDelta() else { return nil }
         return extract(from: delta)
     }
 

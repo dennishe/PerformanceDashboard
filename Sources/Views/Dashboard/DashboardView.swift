@@ -15,114 +15,54 @@ struct DashboardView: View {
     let mediaEngineViewModel: MediaEngineViewModel
     let wirelessViewModel: WirelessViewModel
 
+    @State private var isPulsing = false
+
     var body: some View {
-        DashboardLayout(spacing: 12, minTileWidth: 220) {
-            cpuTile.wideEligible()
-            gpuTile.wideEligible()
-            memoryTile.wideEligible()
-            networkInTile
-            networkOutTile
-            diskTile
-            #if arch(arm64)
-            aneTile
-            mediaEngineTile
-            #endif
-            powerTile
-            thermalTile
-            fanTile
-            batteryTile
-            wirelessTile
+        VStack(spacing: 0) {
+            header
+            DashboardLayout(spacing: 12, minTileWidth: 220) {
+                CPUTileView(viewModel: cpuViewModel).wideEligible()
+                GPUTileView(viewModel: gpuViewModel).wideEligible()
+                MemoryTileView(viewModel: memoryViewModel).wideEligible()
+                NetworkInTileView(viewModel: networkViewModel)
+                NetworkOutTileView(viewModel: networkViewModel)
+                DiskTileView(viewModel: diskViewModel)
+                #if arch(arm64)
+                ANETileView(viewModel: acceleratorViewModel)
+                MediaEngineTileView(viewModel: mediaEngineViewModel)
+                #endif
+                PowerTileView(viewModel: powerViewModel)
+                ThermalTileView(viewModel: thermalViewModel)
+                FanTileView(viewModel: fanViewModel)
+                BatteryTileView(viewModel: batteryViewModel)
+                WirelessTileView(viewModel: wirelessViewModel)
+            }
         }
         .background(Color.dashboardBackground)
     }
 
-    // MARK: - Tile builders
+    // MARK: - Header
 
-    private var cpuTile: some View {
-        MetricTileView(title: "CPU", value: cpuViewModel.usageLabel,
-                       gaugeValue: cpuViewModel.usage, history: cpuViewModel.history,
-                       thresholdLevel: cpuViewModel.thresholdLevel)
-    }
-
-    private var gpuTile: some View {
-        MetricTileView(title: "GPU", value: gpuViewModel.usageLabel,
-                       gaugeValue: gpuViewModel.usage, history: gpuViewModel.history,
-                       thresholdLevel: gpuViewModel.thresholdLevel)
-    }
-
-    private var memoryTile: some View {
-        MetricTileView(title: "Memory", value: memoryViewModel.usageLabel,
-                       gaugeValue: memoryViewModel.usage, history: memoryViewModel.history,
-                       thresholdLevel: memoryViewModel.thresholdLevel,
-                       subtitle: "\(memoryViewModel.usedLabel) / \(memoryViewModel.totalLabel)")
-    }
-
-    private var networkInTile: some View {
-        MetricTileView(title: "Network In", value: networkViewModel.inLabel,
-                       gaugeValue: networkViewModel.inGauge, history: networkViewModel.historyInGauge,
-                       thresholdLevel: networkViewModel.thresholdLevel)
-    }
-
-    private var networkOutTile: some View {
-        MetricTileView(title: "Network Out", value: networkViewModel.outLabel,
-                       gaugeValue: networkViewModel.outGauge, history: networkViewModel.historyOutGauge,
-                       thresholdLevel: networkViewModel.thresholdLevel)
-    }
-
-    private var diskTile: some View {
-        MetricTileView(title: "Disk", value: diskViewModel.usageLabel,
-                       gaugeValue: diskViewModel.usage, history: diskViewModel.history,
-                       thresholdLevel: diskViewModel.thresholdLevel,
-                       subtitle: diskViewModel.availableLabel + " free")
-    }
-
-    #if arch(arm64)
-    private var aneTile: some View {
-        MetricTileView(title: "ANE", value: acceleratorViewModel.usageLabel,
-                       gaugeValue: acceleratorViewModel.aneUsage, history: acceleratorViewModel.history,
-                       thresholdLevel: acceleratorViewModel.thresholdLevel)
-    }
-
-    private var mediaEngineTile: some View {
-        MetricTileView(title: "Media Eng.", value: mediaEngineViewModel.combinedLabel,
-                       gaugeValue: mediaEngineViewModel.gaugeValue, history: mediaEngineViewModel.history,
-                       thresholdLevel: mediaEngineViewModel.thresholdLevel,
-                       subtitle: mediaEngineViewModel.decodeLabel)
-    }
-    #endif
-
-    private var powerTile: some View {
-        MetricTileView(title: "Power", value: powerViewModel.wattsLabel,
-                       gaugeValue: powerViewModel.gaugeValue, history: powerViewModel.history,
-                       thresholdLevel: powerViewModel.thresholdLevel)
-    }
-
-    private var thermalTile: some View {
-        MetricTileView(title: "Temp", value: thermalViewModel.cpuLabel,
-                       gaugeValue: thermalViewModel.gaugeValue, history: thermalViewModel.history,
-                       thresholdLevel: thermalViewModel.thresholdLevel,
-                       subtitle: thermalViewModel.gpuLabel)
-    }
-
-    private var fanTile: some View {
-        MetricTileView(title: "Fans", value: fanViewModel.primaryLabel,
-                       gaugeValue: fanViewModel.gaugeValue, history: fanViewModel.history,
-                       thresholdLevel: fanViewModel.thresholdLevel,
-                       subtitle: fanViewModel.subtitle)
-    }
-
-    private var batteryTile: some View {
-        MetricTileView(title: "Battery", value: batteryViewModel.chargeLabel,
-                       gaugeValue: batteryViewModel.gaugeValue, history: batteryViewModel.history,
-                       thresholdLevel: batteryViewModel.thresholdLevel,
-                       subtitle: batteryViewModel.statusLabel)
-    }
-
-    private var wirelessTile: some View {
-        MetricTileView(title: "Wireless", value: wirelessViewModel.signalLabel,
-                       gaugeValue: wirelessViewModel.gaugeValue, history: wirelessViewModel.history,
-                       thresholdLevel: wirelessViewModel.thresholdLevel,
-                       subtitle: wirelessViewModel.bluetoothLabel)
+    private var header: some View {
+        HStack(spacing: 7) {
+            Text("Performance")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+            Circle()
+                .fill(Color.green)
+                .frame(width: 6, height: 6)
+                .shadow(color: .green.opacity(0.7), radius: 4)
+                .opacity(isPulsing ? 0.3 : 1.0)
+                .animation(
+                    .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
+                    value: isPulsing
+                )
+                .onAppear { isPulsing = true }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
     }
 }
 

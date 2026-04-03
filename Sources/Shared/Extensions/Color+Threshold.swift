@@ -12,19 +12,11 @@ extension Color {
         }
     }
 
-    /// Tile card surface — white in light mode, slightly elevated dark in dark mode.
-    /// Matches the card surfaces used in macOS Settings.
-    static let tileSurface = Color(nsColor: NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            ? NSColor(white: 0.17, alpha: 1)   // ~#2b2b2b
-            : .white
-    })
+    /// Tile card surface — uses the macOS semantic controlBackground color,
+    /// which is white in light mode and elevated dark in dark mode.
+    static let tileSurface = Color(nsColor: .controlBackgroundColor)
 
-    /// Dashboard window background — light gray in light mode, near-black in dark mode.
-    /// Matches the window background used in macOS Settings.
-    static let dashboardBackground = Color(nsColor: NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            ? NSColor(white: 0.11, alpha: 1)   // ~#1c1c1c
-            : NSColor(white: 0.94, alpha: 1)   // ~#f0f0f0
-    })
+    /// Dashboard window background — uses the macOS semantic windowBackground color,
+    /// which is light gray in light mode and near-black in dark mode.
+    static let dashboardBackground = Color(nsColor: .windowBackgroundColor)
 }

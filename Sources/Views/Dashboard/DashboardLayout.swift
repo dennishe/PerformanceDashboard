@@ -14,6 +14,13 @@ extension View {
 }
 
 // MARK: - DashboardLayout
+/// Per-width layout result cached inside `DashboardLayout.Cache`.
+struct DashboardLayoutEntry: Sendable {
+    let columns: Int
+    let tileWidth: CGFloat
+    let spans: [Int]
+    let rowHeightValues: [CGFloat]
+}
 
 /// Adaptive grid that promotes wide-eligible tiles to span two columns so the last row is always full.
 /// The number of columns is derived from the container width and `minTileWidth`.
@@ -24,44 +31,88 @@ struct DashboardLayout: Layout {
     var minTileWidth: CGFloat = 200
     var padding: CGFloat = 16
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard !subviews.isEmpty else { return .zero }
-        let width = proposal.width ?? 800
-        let avail = max(0, width - 2 * padding)
-        let cols = columnCount(for: avail)
-        let spans = assignSpans(subviews: subviews, columns: cols)
-        let tW = tileWidth(containerWidth: avail, cols: cols)
-        let heights = rowHeights(subviews: subviews, spans: spans, tileW: tW, columns: cols)
-        let tileH = heights.reduce(0, +) + CGFloat(max(heights.count - 1, 0)) * spacing
-        return CGSize(width: width, height: tileH + 2 * padding)
+    // MARK: Cache
+
+    struct Cache: Sendable {
+        var subviewCount: Int = 0
+        // Keyed by available width so minSize probes never evict the display-width entry.
+        var entries: [CGFloat: DashboardLayoutEntry] = [:]
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func makeCache(subviews: Subviews) -> Cache {
+        Cache(subviewCount: subviews.count)
+    }
+
+    func updateCache(_ cache: inout Cache, subviews: Subviews) {
+        // Invalidate entries when subview count changes (e.g. arm64 tiles toggled at runtime).
+        if cache.subviewCount != subviews.count {
+            cache.entries = [:]
+            cache.subviewCount = subviews.count
+        }
+    }
+
+    // MARK: Layout
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
+        guard !subviews.isEmpty else { return .zero }
+        let avail = max(0, (proposal.width ?? 800) - 2 * padding)
+        populate(&cache, availableWidth: avail, subviews: subviews)
+        guard let entry = cache.entries[avail] else { return .zero }
+        let total = entry.rowHeightValues.reduce(0, +)
+            + CGFloat(max(entry.rowHeightValues.count - 1, 0)) * spacing
+        return CGSize(width: avail + 2 * padding, height: total + 2 * padding)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
         guard !subviews.isEmpty else { return }
         let avail = max(0, bounds.width - 2 * padding)
-        let cols = columnCount(for: avail)
-        let tileW = tileWidth(containerWidth: avail, cols: cols)
-        let spans = assignSpans(subviews: subviews, columns: cols)
-        let heights = rowHeights(subviews: subviews, spans: spans, tileW: tileW, columns: cols)
+        populate(&cache, availableWidth: avail, subviews: subviews)
+        guard let entry = cache.entries[avail] else { return }
         var col = 0, row = 0
         var rowY = bounds.minY + padding
         for (index, subview) in subviews.enumerated() {
-            let span = spans[index]
-            if col + span > cols { rowY += heights[row] + spacing; col = 0; row += 1 }
-            let tileW2 = CGFloat(span) * tileW + CGFloat(span - 1) * spacing
+            let span = entry.spans[index]
+            if col + span > entry.columns { rowY += entry.rowHeightValues[row] + spacing; col = 0; row += 1 }
+            let tileW2 = CGFloat(span) * entry.tileWidth + CGFloat(span - 1) * spacing
             subview.place(
-                at: CGPoint(x: bounds.minX + padding + CGFloat(col) * (tileW + spacing), y: rowY),
-                proposal: ProposedViewSize(width: tileW2, height: heights[row])
+                at: CGPoint(x: bounds.minX + padding + CGFloat(col) * (entry.tileWidth + spacing), y: rowY),
+                proposal: ProposedViewSize(width: tileW2, height: entry.rowHeightValues[row])
             )
             col += span
-            if col == cols { rowY += heights[row] + spacing; col = 0; row += 1 }
+            if col == entry.columns { rowY += entry.rowHeightValues[row] + spacing; col = 0; row += 1 }
         }
     }
+
+    // Returning nil short-circuits SwiftUI's default explicitAlignment implementation, which
+    // would otherwise call placeSubviews on every alignment-guide query during layout.
+    func explicitAlignment(
+        of guide: HorizontalAlignment, in bounds: CGRect,
+        proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache
+    ) -> CGFloat? { nil }
+    func explicitAlignment(
+        of guide: VerticalAlignment, in bounds: CGRect,
+        proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache
+    ) -> CGFloat? { nil }
 }
 
 // MARK: - Private Helpers
 
 private extension DashboardLayout {
+    /// Fills (or reuses) the cache entry for the given available width.
+    /// Entries are keyed by width so different size proposals never evict each other.
+    func populate(_ cache: inout Cache, availableWidth: CGFloat, subviews: Subviews) {
+        guard cache.entries[availableWidth] == nil else { return }
+        let cols = columnCount(for: availableWidth)
+        let tileW = tileWidth(containerWidth: availableWidth, cols: cols)
+        let spans = assignSpans(subviews: subviews, columns: cols)
+        cache.entries[availableWidth] = DashboardLayoutEntry(
+            columns: cols,
+            tileWidth: tileW,
+            spans: spans,
+            rowHeightValues: rowHeights(subviews: subviews, spans: spans, tileW: tileW, columns: cols)
+        )
+    }
+
     func columnCount(for width: CGFloat) -> Int {
         max(1, Int((width + spacing) / (minTileWidth + spacing)))
     }
