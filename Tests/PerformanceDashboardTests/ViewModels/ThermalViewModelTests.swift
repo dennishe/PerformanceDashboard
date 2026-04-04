@@ -1,0 +1,151 @@
+import Testing
+@testable import PerformanceDashboard
+
+@MainActor
+struct ThermalViewModelTests {
+
+    @Test func cpuCelsius_updatesFromStream() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 65.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.cpuCelsius == 65.0)
+    }
+
+    @Test func gpuCelsius_updatesFromStream() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: 40.0)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gpuCelsius == 40.0)
+    }
+
+    @Test func gaugeValue_normalisesTo100CelsiusMax() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gaugeValue == 0.5)
+    }
+
+    @Test func gaugeValue_capsAtOne_forOverheat() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 150.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gaugeValue == 1.0)
+    }
+
+    @Test func gaugeValue_isNil_whenCpuIsNil() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gaugeValue == nil)
+    }
+
+    @Test func cpuLabel_formatsToOneDecimalPlace() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 72.3, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.cpuLabel == "72.3°C")
+    }
+
+    @Test func cpuLabel_showsDash_whenCpuIsNil() {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = []
+        let viewModel = ThermalViewModel(monitor: monitor)
+        #expect(viewModel.cpuLabel == "—")
+    }
+
+    @Test func gpuLabel_isNil_whenGpuIsNil() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gpuLabel == nil)
+    }
+
+    @Test func gpuLabel_showsGpuPrefix() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: 45.5)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.gpuLabel == "GPU 45.5°C")
+    }
+
+    @Test func thresholdLevel_inactive_beforeFirstSample() {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = []
+        let viewModel = ThermalViewModel(monitor: monitor)
+        #expect(viewModel.thresholdLevel == .inactive)
+    }
+
+    @Test func thresholdLevel_normal_belowSeventyPercent() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.thresholdLevel == .normal)
+    }
+
+    @Test func thresholdLevel_warning_betweenSeventyAndEightyFive() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 78.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.thresholdLevel == .warning)
+    }
+
+    @Test func thresholdLevel_critical_aboveEightyFive() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 90.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.thresholdLevel == .critical)
+    }
+
+    @Test func history_appendsNormalizedValue() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.history.count == 1)
+        #expect(abs(viewModel.history[0] - 0.5) < 0.001)
+    }
+
+    @Test func history_appendsZero_whenCpuIsNil() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.history.count == 1)
+        #expect(viewModel.history[0] == 0)
+    }
+
+    @Test func stop_haltsUpdates() async {
+        let monitor = MockThermalMonitor()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: nil)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+        viewModel.start()
+        try? await Task.sleep(for: .milliseconds(50))
+        let cpuBeforeStop = viewModel.cpuCelsius
+        viewModel.stop()
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(viewModel.cpuCelsius == cpuBeforeStop)
+    }
+}

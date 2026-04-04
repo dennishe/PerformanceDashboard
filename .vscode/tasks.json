@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Generate Coverage Report",
+			"type": "shell",
+			"command": "swift test --enable-code-coverage 2>&1 && xcrun llvm-cov report .build/debug/PerformanceDashboardPackageTests.xctest/Contents/MacOS/PerformanceDashboardPackageTests -instr-profile .build/debug/codecov/default.profdata 2>&1 | tee /tmp/coverage.txt"
+		},
+		{
+			"label": "Run Tests",
+			"type": "shell",
+			"command": "swift test 2>&1 | tail -40"
+		}
+	]
+}

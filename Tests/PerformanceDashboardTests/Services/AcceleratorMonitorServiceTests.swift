@@ -2,23 +2,16 @@ import Testing
 @testable import PerformanceDashboard
 
 struct AcceleratorMonitorServiceTests {
-    @Test func sample_doesNotCrash() {
-        // Returns nil unless an ANE IOKit service is accessible.
-        let usage = AcceleratorMonitorService.sample()
-        if let usage {
-            #expect(usage >= 0)
-            #expect(usage <= 1)
-        }
+    @Test @MainActor func service_canBeInstantiated() {
+        let service = AcceleratorMonitorService()
+        // Verify it conforms to MetricMonitorProtocol; no crash on init.
+        let _: any MetricMonitorProtocol<AcceleratorSnapshot> = service
     }
 
-    @Test func readANEUsage_returnsNil_forUnknownServiceName() {
-        #if arch(arm64)
-        let result = AcceleratorMonitorService.readANEUsage(serviceName: "NonExistentService_XYZ")
-        #expect(result == nil)
-        #else
-        // Non-arm64: sample always returns nil
-        #expect(AcceleratorMonitorService.sample() == nil)
-        #endif
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = AcceleratorMonitorService()
+        let _ = service.stream()
+        service.stop() // Should not crash.
     }
 
     @Test func acceleratorSnapshot_nilUsage_representsUnavailable() {
