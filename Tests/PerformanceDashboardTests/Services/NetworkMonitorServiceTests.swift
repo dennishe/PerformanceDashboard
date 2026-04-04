@@ -22,4 +22,17 @@ struct NetworkMonitorServiceTests {
         #expect(snapshot.bytesInPerSecond == 1024)
         #expect(snapshot.bytesOutPerSecond == 512)
     }
+
+    // MARK: - Service lifecycle
+
+    @Test @MainActor func service_conformsToProtocol() {
+        let service = NetworkMonitorService()
+        let _: any MetricMonitorProtocol<NetworkSnapshot> = service
+    }
+
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = NetworkMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
 }

@@ -21,28 +21,9 @@ public struct BatterySnapshot: Sendable {
 }
 
 /// Monitors battery and power source via the public IOPS API + IORegistry.
-public final class BatteryMonitorService: MetricMonitorProtocol {
-    public init() {}
-
-    private var continuation: AsyncStream<BatterySnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    @MainActor
-    public func stream() -> AsyncStream<BatterySnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task { await self.poll(continuation: continuation) }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<BatterySnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<BatterySnapshot>.Continuation) async {
         while !Task.isCancelled {
             continuation.yield(BatteryMonitorService.sample())
             do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }

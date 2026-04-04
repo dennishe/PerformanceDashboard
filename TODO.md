@@ -10,11 +10,11 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 - [x] **0. App shows no UI when launched via `swift run`** *(fixed)*  
   SPM executables run as CLI processes — macOS doesn't promote them to foreground GUI apps without an app bundle or an explicit activation call. Fixed by adding `AppDelegate` with `NSApp.setActivationPolicy(.regular)` + `NSApp.activate(ignoringOtherApps: true)`, wired in via `@NSApplicationDelegateAdaptor`.
 
-- [ ] **1. Verify GPU tile shows real values**  
-  Run `ioreg -l -n IOAccelerator | grep "Device Utilization"` to confirm the IOKit key name on this machine matches what `GPUMonitorService` reads. Fix key if needed.
+- [x] **1. Verify GPU tile shows real values** *(verified)*  
+  Confirmed `Device Utilization %` key is present in the IOAccelerator `PerformanceStatistics` dict on this machine — `GPUMonitorService` is correct.
 
-- [ ] **2. Discover real ANE keys**  
-  Run `ioreg -l -n ANE0 | grep -i "util\|power\|load"` to find the actual key names on this machine. Update `AcceleratorMonitorService` with correct keys.
+- [x] **2. Discover real ANE keys** *(resolved)*  
+  ANE data is read via IOReport channels (channel name `"ANE"`) in `AcceleratorMonitorService`; no plain IOKit key lookup needed.
 
 - [x] **3. Fix Task.sleep cancellation in all 6 services** *(fixed)*  
   Replaced `try? await Task.sleep(...)` with `do { try await Task.sleep(...) } catch { break }` so poll loops exit promptly on cancellation.
@@ -64,30 +64,30 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 
 ## � New Tiles
 
-- [ ] **20. Power draw tile**  
-  Read total system power via SMC key `PSTR` (or `PDTR` on Apple Silicon). Display watts with a sparkline. Gate on key availability; gracefully degrade if absent.
+- [x] **20. Power draw tile** *(done)*  
+  `PowerMonitorService` + `PowerViewModel` + `PowerTileView` implemented.
 
-- [ ] **21. Fan speed tile**  
-  Read fan RPMs via SMC keys `F0Ac`, `F1Ac`, etc. Show RPM per fan and % of max (`F0Mx`). Handle Macs with zero fans (MacBook Air M-series) gracefully.
+- [x] **21. Fan speed tile** *(done)*  
+  `FanMonitorService` + `FanViewModel` + `FanTileView` implemented.
 
-- [ ] **22. Temperatures tile**  
-  Read CPU die and GPU die temperatures via SMC. Display in °C with threshold colour coding (green → orange → red). Key names differ between Intel and Apple Silicon — detect at runtime.
+- [x] **22. Temperatures tile** *(done)*  
+  `ThermalMonitorService` + `ThermalViewModel` + `ThermalTileView` implemented.
 
-- [ ] **23. Battery tile**  
-  Show charge %, health (design vs current capacity), cycle count, and charging/discharging state + time-to-empty via `IOPMPowerSource` / `IOKit`. Hide tile entirely on desktop Macs (no battery present).
+- [x] **23. Battery tile** *(done)*  
+  `BatteryMonitorService` + `BatteryViewModel` + `BatteryTileView` implemented. Tile hides gauge when no battery present.
 
-- [ ] **24. Media Engine tile** *(Apple Silicon only)*  
-  Report H.264/HEVC encode and decode engine utilisation via IOKit (`AppleAVD` / `AppleVXD`). Follow the same IOReport pattern used for the ANE tile. Gate with `#if arch(arm64)`.
+- [x] **24. Media Engine tile** *(done, Apple Silicon only)*  
+  `MediaEngineMonitorService` + `MediaEngineViewModel` + `MediaEngineTileView` implemented. Gated with `#if arch(arm64)`.
 
-- [ ] **25. Wi-Fi / Bluetooth signal tile**  
-  Show current Wi-Fi RSSI and channel via `CoreWLAN` (`CWWiFiClient`). Show connected Bluetooth device count / RSSI via `IOBluetooth`. Combine into a single "Wireless" tile with two rows.
+- [x] **25. Wi-Fi / Bluetooth signal tile** *(done)*  
+  `WirelessMonitorService` + `WirelessViewModel` + `WirelessTileView` implemented.
 
 ---
 
 ## ��� Testing
 
-- [ ] **15. Test `stream()` + `stop()` lifecycle on each service**  
-  Write async tests that call the real `stream()`, collect one emission via `for await`, then call `stop()`. This covers the poll-loop infrastructure currently at 0%.
+- [x] **15. Test `stream()` + `stop()` lifecycle on each service** *(fixed)*  
+  Added `service_conformsToProtocol()` + `stream_canBeStartedAndStopped()` to all 12 service test suites (CPU, GPU, Memory, Network, Disk were missing; pre-existing `let _` lint violations also fixed).
 
 - [x] **16. Test ViewModel `stop()` paths** *(fixed)*  
   Added a `stop_haltsUpdates()` test to all 6 ViewModel test files.
@@ -99,8 +99,8 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 
 ## 🟢 Code Quality
 
-- [ ] **18. Reduce `DashboardView` duplication**  
-  The 7 `MetricTileView` call-sites are repetitive. Introduce a `MetricTileViewModel` protocol or a helper method to reduce boilerplate while keeping type safety.
+- [x] **18. Reduce `DashboardView` duplication** *(fixed)*  
+  Introduced `MetricTilePresenting` protocol (`Shared/Protocols/`) and mapped all 11 non-Network ViewModels to it via `Shared/Extensions/ViewModels+MetricTilePresenting.swift`. `MetricTiles.swift` now uses a single `MonitorTileView<VM>` generic with `typealias` per metric; Network tiles remain explicit (two tiles, one ViewModel).
 
 - [x] **19. Remove spurious `async` from `startAll()`** *(fixed)*  
   Removed `async` from `startAll()` and replaced `.task { await startAll() }` with `.onChange(of: scenePhase, initial: true)` (see item 14).

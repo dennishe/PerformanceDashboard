@@ -46,7 +46,7 @@ struct ThermalMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = ThermalMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop()
     }
 }

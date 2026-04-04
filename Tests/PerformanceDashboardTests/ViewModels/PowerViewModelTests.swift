@@ -5,7 +5,7 @@ import Testing
 struct PowerViewModelTests {
 
     @Test func watts_updatesFromStream() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 15.5)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -14,21 +14,21 @@ struct PowerViewModelTests {
     }
 
     @Test func watts_isNilInitially() {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = []
         let viewModel = PowerViewModel(monitor: monitor)
         #expect(viewModel.watts == nil)
     }
 
     @Test func gaugeValue_isNil_whenWattsIsNil() {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = []
         let viewModel = PowerViewModel(monitor: monitor)
         #expect(viewModel.gaugeValue == nil)
     }
 
     @Test func gaugeValue_normalisesAgainstDefaultMax() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 10.0)]  // 10 / 20 = 0.5
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -37,7 +37,7 @@ struct PowerViewModelTests {
     }
 
     @Test func adaptiveMax_growsWhenExceeded() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [
             PowerSnapshot(watts: 10.0),  // adaptiveMax stays 20
             PowerSnapshot(watts: 50.0)   // adaptiveMax grows to 50; gaugeValue = 50/50 = 1.0
@@ -50,7 +50,7 @@ struct PowerViewModelTests {
     }
 
     @Test func wattsLabel_formatsToOneDecimalPlace() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 12.3)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -59,7 +59,7 @@ struct PowerViewModelTests {
     }
 
     @Test func wattsLabel_showsDash_whenWattsIsNil() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: nil)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -68,7 +68,7 @@ struct PowerViewModelTests {
     }
 
     @Test func thresholdLevel_normal_forLowDraw() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 5.0)]  // 5/20 = 0.25 < 0.6
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -77,7 +77,7 @@ struct PowerViewModelTests {
     }
 
     @Test func thresholdLevel_critical_forHighDraw() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 19.0)]  // 19/20 = 0.95 > 0.85
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -86,7 +86,7 @@ struct PowerViewModelTests {
     }
 
     @Test func history_appendsNormalizedValue() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 10.0)]  // 10/20 = 0.5
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -96,7 +96,7 @@ struct PowerViewModelTests {
     }
 
     @Test func history_appendsZero_whenWattsIsNil() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: nil)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
@@ -106,7 +106,7 @@ struct PowerViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockPowerMonitor()
+        let monitor = MockMonitor<PowerSnapshot>()
         monitor.snapshots = [PowerSnapshot(watts: 12.5)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()

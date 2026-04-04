@@ -11,30 +11,9 @@ public struct DiskSnapshot: Sendable {
 }
 
 /// Monitors boot-volume disk usage via `URLResourceValues`.
-public final class DiskMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<DiskSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<DiskSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class DiskMonitorService: PollingMonitorBase<DiskSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<DiskSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<DiskSnapshot>.Continuation) async {
         while !Task.isCancelled {
             if let snapshot = DiskMonitorService.sample() {
                 continuation.yield(snapshot)

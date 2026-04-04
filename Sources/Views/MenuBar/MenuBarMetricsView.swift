@@ -9,6 +9,12 @@ struct MenuBarMetricsView: View {
     let diskViewModel: DiskViewModel
     let acceleratorViewModel: AcceleratorViewModel
 
+    /// Called when the user taps "Open Dashboard". Injected by the caller to keep AppKit
+    /// side-effects out of this SwiftUI view.
+    let openDashboard: () -> Void
+    /// Called when the user taps "Quit". Injected by the caller.
+    let quit: () -> Void
+
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -59,12 +65,12 @@ struct MenuBarMetricsView: View {
         HStack {
             Button("Open Dashboard") {
                 openWindow(id: "main")
-                NSApp.activate(ignoringOtherApps: true)
+                openDashboard()
             }
             .buttonStyle(.borderless)
             .controlSize(.small)
             Spacer()
-            Button("Quit") { NSApp.terminate(nil) }
+            Button("Quit") { quit() }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .foregroundStyle(.red)

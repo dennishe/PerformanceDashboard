@@ -5,7 +5,7 @@ import Testing
 struct FanViewModelTests {
 
     @Test func fans_updatesFromStream() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -15,14 +15,14 @@ struct FanViewModelTests {
     }
 
     @Test func gaugeValue_isNil_whenNoFans() {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = []
         let viewModel = FanViewModel(monitor: monitor)
         #expect(viewModel.gaugeValue == nil)
     }
 
     @Test func gaugeValue_returnsFraction_forSingleFan() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -31,7 +31,7 @@ struct FanViewModelTests {
     }
 
     @Test func gaugeValue_returnsMaxFraction_forMultipleFans() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [
             FanReading(current: 3000, max: 6000),  // 0.5
             FanReading(current: 4800, max: 6000)   // 0.8
@@ -43,7 +43,7 @@ struct FanViewModelTests {
     }
 
     @Test func primaryLabel_showsNoFans_whenEmpty() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -52,7 +52,7 @@ struct FanViewModelTests {
     }
 
     @Test func primaryLabel_showsFastestRPM() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [
             FanReading(current: 1200, max: 6000),
             FanReading(current: 2400, max: 6000)
@@ -64,14 +64,14 @@ struct FanViewModelTests {
     }
 
     @Test func subtitle_isNil_whenNoFans() {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = []
         let viewModel = FanViewModel(monitor: monitor)
         #expect(viewModel.subtitle == nil)
     }
 
     @Test func subtitle_showsSingleFanDetail() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -80,7 +80,7 @@ struct FanViewModelTests {
     }
 
     @Test func subtitle_showsMultipleFansJoined() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [
             FanReading(current: 1200, max: 6000),
             FanReading(current: 2400, max: 6000)
@@ -92,7 +92,7 @@ struct FanViewModelTests {
     }
 
     @Test func thresholdLevel_inactive_whenNoFans() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -101,7 +101,7 @@ struct FanViewModelTests {
     }
 
     @Test func thresholdLevel_normal_forLowFanSpeed() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5 < 0.7
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -110,7 +110,7 @@ struct FanViewModelTests {
     }
 
     @Test func thresholdLevel_critical_forHighFanSpeed() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 5700, max: 6000)])]  // 0.95 > 0.9
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -119,7 +119,7 @@ struct FanViewModelTests {
     }
 
     @Test func history_appendsFanFraction() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
@@ -129,7 +129,7 @@ struct FanViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockFanMonitor()
+        let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()

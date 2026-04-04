@@ -31,4 +31,17 @@ struct MemoryMonitorServiceTests {
         #expect(snapshot.total == 8_000_000_000)
         #expect(snapshot.used == 4_000_000_000)
     }
+
+    // MARK: - Service lifecycle
+
+    @Test @MainActor func service_conformsToProtocol() {
+        let service = MemoryMonitorService()
+        let _: any MetricMonitorProtocol<MemorySnapshot> = service
+    }
+
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = MemoryMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
 }

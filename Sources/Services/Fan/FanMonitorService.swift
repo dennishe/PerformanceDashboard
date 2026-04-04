@@ -18,28 +18,9 @@ public struct FanSnapshot: Sendable {
 }
 
 /// Reads fan speeds and maxima from the SMC.
-public final class FanMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<FanSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<FanSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task { await self.poll(continuation: continuation) }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class FanMonitorService: PollingMonitorBase<FanSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<FanSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<FanSnapshot>.Continuation) async {
         let smc = SMCBridge()
         defer { smc?.close() }
         while !Task.isCancelled {

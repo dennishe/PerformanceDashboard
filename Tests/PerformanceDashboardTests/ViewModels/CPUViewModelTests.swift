@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct CPUViewModelTests {
     @Test func cpuUsage_updatesFromStream() async {
-        let monitor = MockCPUMonitor()
+        let monitor = MockMonitor<CPUSnapshot>()
         monitor.snapshots = [CPUSnapshot(usage: 0.75)]
         let viewModel = CPUViewModel(monitor: monitor)
 
@@ -16,7 +16,7 @@ struct CPUViewModelTests {
     }
 
     @Test func cpuUsageLabel_formatsToOneDecimal() async {
-        let monitor = MockCPUMonitor()
+        let monitor = MockMonitor<CPUSnapshot>()
         monitor.snapshots = [CPUSnapshot(usage: 0.5)]
         let viewModel = CPUViewModel(monitor: monitor)
 
@@ -27,7 +27,7 @@ struct CPUViewModelTests {
     }
 
     @Test func cpuHistory_appendsAndCapsAtHistorySamples() async {
-        let monitor = MockCPUMonitor()
+        let monitor = MockMonitor<CPUSnapshot>()
         monitor.snapshots = (0..<70).map { _ in CPUSnapshot(usage: 0.1) }
         let viewModel = CPUViewModel(monitor: monitor)
 
@@ -50,7 +50,7 @@ struct CPUViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockCPUMonitor()
+        let monitor = MockMonitor<CPUSnapshot>()
         monitor.snapshots = [CPUSnapshot(usage: 0.3)]
         let viewModel = CPUViewModel(monitor: monitor)
 

@@ -57,7 +57,7 @@ struct FanMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = FanMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop()
     }
 }

@@ -2,18 +2,7 @@ import SwiftUI
 
 /// Root dashboard view — all metrics visible without scrolling on wide displays.
 struct DashboardView: View {
-    let cpuViewModel: CPUViewModel
-    let gpuViewModel: GPUViewModel
-    let memoryViewModel: MemoryViewModel
-    let networkViewModel: NetworkViewModel
-    let diskViewModel: DiskViewModel
-    let acceleratorViewModel: AcceleratorViewModel
-    let powerViewModel: PowerViewModel
-    let fanViewModel: FanViewModel
-    let thermalViewModel: ThermalViewModel
-    let batteryViewModel: BatteryViewModel
-    let mediaEngineViewModel: MediaEngineViewModel
-    let wirelessViewModel: WirelessViewModel
+    let services: ServiceContainer
 
     @State private var isPulsing = false
 
@@ -21,21 +10,21 @@ struct DashboardView: View {
         VStack(spacing: 0) {
             header
             DashboardLayout(spacing: 12, minTileWidth: 220) {
-                CPUTileView(viewModel: cpuViewModel).wideEligible()
-                GPUTileView(viewModel: gpuViewModel).wideEligible()
-                MemoryTileView(viewModel: memoryViewModel).wideEligible()
-                NetworkInTileView(viewModel: networkViewModel)
-                NetworkOutTileView(viewModel: networkViewModel)
-                DiskTileView(viewModel: diskViewModel)
+                CPUTileView(viewModel: services.cpu).wideEligible()
+                GPUTileView(viewModel: services.gpu).wideEligible()
+                MemoryTileView(viewModel: services.memory).wideEligible()
+                NetworkInTileView(viewModel: services.network)
+                NetworkOutTileView(viewModel: services.network)
+                DiskTileView(viewModel: services.disk)
                 #if arch(arm64)
-                ANETileView(viewModel: acceleratorViewModel)
-                MediaEngineTileView(viewModel: mediaEngineViewModel)
+                ANETileView(viewModel: services.accelerator)
+                MediaEngineTileView(viewModel: services.mediaEngine)
                 #endif
-                PowerTileView(viewModel: powerViewModel)
-                ThermalTileView(viewModel: thermalViewModel)
-                FanTileView(viewModel: fanViewModel)
-                BatteryTileView(viewModel: batteryViewModel)
-                WirelessTileView(viewModel: wirelessViewModel)
+                PowerTileView(viewModel: services.power)
+                ThermalTileView(viewModel: services.thermal)
+                FanTileView(viewModel: services.fan)
+                BatteryTileView(viewModel: services.battery)
+                WirelessTileView(viewModel: services.wireless)
             }
         }
         .background(Color.dashboardBackground)
@@ -67,18 +56,6 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView(
-        cpuViewModel: CPUViewModel(monitor: MockCPUMonitor()),
-        gpuViewModel: GPUViewModel(monitor: MockGPUMonitor()),
-        memoryViewModel: MemoryViewModel(monitor: MockMemoryMonitor()),
-        networkViewModel: NetworkViewModel(monitor: MockNetworkMonitor()),
-        diskViewModel: DiskViewModel(monitor: MockDiskMonitor()),
-        acceleratorViewModel: AcceleratorViewModel(monitor: MockAcceleratorMonitor()),
-        powerViewModel: PowerViewModel(monitor: MockPowerMonitor()),
-        fanViewModel: FanViewModel(monitor: MockFanMonitor()),
-        thermalViewModel: ThermalViewModel(monitor: MockThermalMonitor()),
-        batteryViewModel: BatteryViewModel(monitor: MockBatteryMonitor()),
-        mediaEngineViewModel: MediaEngineViewModel(monitor: MockMediaEngineMonitor()),
-        wirelessViewModel: WirelessViewModel(monitor: MockWirelessMonitor())
-    )
+    let services = ServiceContainer()
+    return DashboardView(services: services)
 }

@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct AcceleratorViewModelTests {
     @Test func acceleratorUsage_updatesFromStream() async {
-        let monitor = MockAcceleratorMonitor()
+        let monitor = MockMonitor<AcceleratorSnapshot>()
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.25)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
@@ -15,7 +15,7 @@ struct AcceleratorViewModelTests {
     }
 
     @Test func acceleratorUsageLabel_showsNAWhenNil() async {
-        let monitor = MockAcceleratorMonitor()
+        let monitor = MockMonitor<AcceleratorSnapshot>()
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: nil)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
@@ -30,7 +30,7 @@ struct AcceleratorViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockAcceleratorMonitor()
+        let monitor = MockMonitor<AcceleratorSnapshot>()
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.2)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
 

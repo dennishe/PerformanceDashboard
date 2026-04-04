@@ -8,34 +8,18 @@ public struct AcceleratorSnapshot: Sendable {
 
 /// Monitors Apple ANE load via the private IOReport framework.
 /// Uses two-sample delta energy-model data; only meaningful on Apple Silicon.
-public final class AcceleratorMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<AcceleratorSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<AcceleratorSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
+public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnapshot> {
+    #if arch(arm64)
+    /// Injected sampler; defaults to `PMPSampler.shared` at first use inside poll().
+    /// Setting this before `stream()` injects a mock for testing.
+    @MonitorActor var sampler: any PMPSamplerProtocol = PMPSampler.shared
+    #endif
 
     @MonitorActor
-    private func poll(continuation: AsyncStream<AcceleratorSnapshot>.Continuation) async {
-        // State is local to this actor-isolated function — no shared-mutable-state concerns.
+    override public func poll(continuation: AsyncStream<AcceleratorSnapshot>.Continuation) async {
         #if arch(arm64)
-        PMPSampler.shared.setUp()
-        var ane = ANEState()
+        sampler.setUp()
+        var ane = ANEState(sampler: sampler)
         #endif
         while !Task.isCancelled {
             #if arch(arm64)
@@ -61,12 +45,17 @@ private struct ANEState {
     private static let initialMaxDelta: Double = 1
 
     private var maxDelta: Double = ANEState.initialMaxDelta
+    private let sampler: any PMPSamplerProtocol
+
+    init(sampler: some PMPSamplerProtocol) {
+        self.sampler = sampler
+    }
 
     // MARK: Sampling
 
-    /// Reads the next delta from PMPSampler and returns ANE utilisation in [0, 1].
+    /// Reads the next delta from the injected PMPSampler and returns ANE utilisation in [0, 1].
     @MonitorActor mutating func nextUsage() -> Double? {
-        guard let delta = PMPSampler.shared.nextDelta() else { return nil }
+        guard let delta = sampler.nextDelta() else { return nil }
         return extractANE(from: delta)
     }
 

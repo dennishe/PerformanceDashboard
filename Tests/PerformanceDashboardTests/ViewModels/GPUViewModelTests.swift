@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct GPUViewModelTests {
     @Test func gpuUsage_updatesFromStream() async {
-        let monitor = MockGPUMonitor()
+        let monitor = MockMonitor<GPUSnapshot>()
         monitor.snapshots = [GPUSnapshot(usage: 0.55)]
         let viewModel = GPUViewModel(monitor: monitor)
 
@@ -15,7 +15,7 @@ struct GPUViewModelTests {
     }
 
     @Test func gpuUsageLabel_showsNAWhenNil() async {
-        let monitor = MockGPUMonitor()
+        let monitor = MockMonitor<GPUSnapshot>()
         monitor.snapshots = [GPUSnapshot(usage: nil)]
         let viewModel = GPUViewModel(monitor: monitor)
 
@@ -34,7 +34,7 @@ struct GPUViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockGPUMonitor()
+        let monitor = MockMonitor<GPUSnapshot>()
         monitor.snapshots = [GPUSnapshot(usage: 0.5)]
         let viewModel = GPUViewModel(monitor: monitor)
 

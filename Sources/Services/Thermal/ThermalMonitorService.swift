@@ -18,28 +18,9 @@ public struct ThermalSnapshot: Sendable {
 /// GPU key: `TG0D` (Intel/AMD discrete).
 /// Apple Silicon GPU temperature is not reliably exposed in the SMC;
 /// `gpuCelsius` will be `nil` on those machines.
-public final class ThermalMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<ThermalSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<ThermalSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task { await self.poll(continuation: continuation) }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class ThermalMonitorService: PollingMonitorBase<ThermalSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<ThermalSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<ThermalSnapshot>.Continuation) async {
         let smc = SMCBridge()
         defer { smc?.close() }
         while !Task.isCancelled {

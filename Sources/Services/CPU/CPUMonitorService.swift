@@ -7,30 +7,9 @@ public struct CPUSnapshot: Sendable {
 }
 
 /// Monitors CPU utilisation by computing deltas between `host_processor_info` samples.
-public final class CPUMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<CPUSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<CPUSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<CPUSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<CPUSnapshot>.Continuation) async {
         var previous: [processor_cpu_load_info] = []
         while !Task.isCancelled {
             let (current, usage) = CPUMonitorService.sample(previous: previous)

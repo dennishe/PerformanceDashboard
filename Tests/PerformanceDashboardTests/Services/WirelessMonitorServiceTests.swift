@@ -3,60 +3,64 @@ import Testing
 
 struct WirelessMonitorServiceTests {
 
-    // MARK: - WirelessSnapshot
+    // MARK: - WiFiSnapshot
 
-    @Test func wirelessSnapshot_storesAllFields() {
-        let snapshot = WirelessSnapshot(
-            wifiSSID: "TestNetwork", wifiRSSI: -58, wifiOn: true,
-            bluetoothConnectedCount: 2, bluetoothOn: true
-        )
-        #expect(snapshot.wifiSSID == "TestNetwork")
-        #expect(snapshot.wifiRSSI == -58)
-        #expect(snapshot.wifiOn == true)
-        #expect(snapshot.bluetoothConnectedCount == 2)
-        #expect(snapshot.bluetoothOn == true)
+    @Test func wifiSnapshot_storesAllFields() {
+        let snapshot = WiFiSnapshot(ssid: "TestNetwork", rssi: -58, on: true)
+        #expect(snapshot.ssid == "TestNetwork")
+        #expect(snapshot.rssi == -58)
+        #expect(snapshot.on == true)
     }
 
-    @Test func wirelessSnapshot_allowsAllNilWifi() {
-        let snapshot = WirelessSnapshot(
-            wifiSSID: nil, wifiRSSI: nil, wifiOn: false,
-            bluetoothConnectedCount: 0, bluetoothOn: false
-        )
-        #expect(snapshot.wifiSSID == nil)
-        #expect(snapshot.wifiRSSI == nil)
-        #expect(snapshot.wifiOn == false)
-        #expect(snapshot.bluetoothConnectedCount == 0)
-        #expect(snapshot.bluetoothOn == false)
+    @Test func wifiSnapshot_allowsNilFields() {
+        let snapshot = WiFiSnapshot(ssid: nil, rssi: nil, on: false)
+        #expect(snapshot.ssid == nil)
+        #expect(snapshot.rssi == nil)
+        #expect(snapshot.on == false)
     }
 
-    @Test func wirelessSnapshot_negativeRSSI_isStoredVerbatim() {
-        let snapshot = WirelessSnapshot(
-            wifiSSID: "Net", wifiRSSI: -100, wifiOn: true,
-            bluetoothConnectedCount: 0, bluetoothOn: false
-        )
-        #expect(snapshot.wifiRSSI == -100)
+    @Test func wifiSnapshot_negativeRSSI_isStoredVerbatim() {
+        let snapshot = WiFiSnapshot(ssid: "Net", rssi: -100, on: true)
+        #expect(snapshot.rssi == -100)
     }
 
-    @Test func wirelessSnapshot_ssidWithoutRSSI_representsDisconnected() {
-        let snapshot = WirelessSnapshot(
-            wifiSSID: nil, wifiRSSI: nil, wifiOn: true,
-            bluetoothConnectedCount: 0, bluetoothOn: false
-        )
-        #expect(snapshot.wifiOn == true)
-        #expect(snapshot.wifiSSID == nil)
-        #expect(snapshot.wifiRSSI == nil)
+    // MARK: - BluetoothSnapshot
+
+    @Test func bluetoothSnapshot_storesAllFields() {
+        let snapshot = BluetoothSnapshot(connectedCount: 3, on: true)
+        #expect(snapshot.connectedCount == 3)
+        #expect(snapshot.on == true)
     }
 
-    // MARK: - Service lifecycle
-
-    @Test @MainActor func service_conformsToProtocol() {
-        let service = WirelessMonitorService()
-        let _: any MetricMonitorProtocol<WirelessSnapshot> = service
+    @Test func bluetoothSnapshot_zeroCount_whenOff() {
+        let snapshot = BluetoothSnapshot(connectedCount: 0, on: false)
+        #expect(snapshot.connectedCount == 0)
+        #expect(snapshot.on == false)
     }
 
-    @Test @MainActor func stream_canBeStartedAndStopped() {
-        let service = WirelessMonitorService()
-        let _ = service.stream()
+    // MARK: - WiFiMonitorService lifecycle
+
+    @Test @MainActor func wifiService_conformsToProtocol() {
+        let service = WiFiMonitorService()
+        let _: any MetricMonitorProtocol<WiFiSnapshot> = service
+    }
+
+    @Test @MainActor func wifiService_stream_canBeStartedAndStopped() {
+        let service = WiFiMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
+
+    // MARK: - BluetoothMonitorService lifecycle
+
+    @Test @MainActor func bluetoothService_conformsToProtocol() {
+        let service = BluetoothMonitorService()
+        let _: any MetricMonitorProtocol<BluetoothSnapshot> = service
+    }
+
+    @Test @MainActor func bluetoothService_stream_canBeStartedAndStopped() {
+        let service = BluetoothMonitorService()
+        _ = service.stream()
         service.stop()
     }
 }

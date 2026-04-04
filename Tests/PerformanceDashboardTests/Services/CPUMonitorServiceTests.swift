@@ -75,6 +75,19 @@ struct CPUMonitorServiceTests {
         #expect(snapshot.usage == 0.42)
     }
 
+    // MARK: - Service lifecycle
+
+    @Test @MainActor func service_conformsToProtocol() {
+        let service = CPUMonitorService()
+        let _: any MetricMonitorProtocol<CPUSnapshot> = service
+    }
+
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = CPUMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
+
     // MARK: - Helpers
 
     private func makeCoreLoad(

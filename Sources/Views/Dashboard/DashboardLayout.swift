@@ -133,14 +133,6 @@ private extension DashboardLayout {
         return col == 0 ? columns : col
     }
 
-    /// Returns all combinations of `size` elements from `array`, in lexicographic order.
-    func combinations<T>(_ array: [T], size: Int) -> [[T]] {
-        guard size > 0, size <= array.count else { return size == 0 ? [[]] : [] }
-        if size == array.count { return [array] }
-        let rest = Array(array.dropFirst())
-        return combinations(rest, size: size - 1).map { [array[0]] + $0 } + combinations(rest, size: size)
-    }
-
     func makeSpans(count: Int, wide: Set<Int>) -> [Int] {
         (0..<count).map { wide.contains($0) ? 2 : 1 }
     }
@@ -160,7 +152,7 @@ private extension DashboardLayout {
 
         // Try all combinations of eligible tiles, preferring smallest indices (CPU, GPU, Memory).
         if extra <= eligible.count {
-            for combo in combinations(eligible, size: extra) {
+            for combo in eligible.combinations(size: extra) {
                 let spans = makeSpans(count: count, wide: Set(combo))
                 if simulate(spans: spans, columns: columns) == columns { return spans }
             }
@@ -171,7 +163,7 @@ private extension DashboardLayout {
         let stillNeeded = extra - min(extra, eligible.count)
         if stillNeeded > 0 {
             let candidates = Array(nonEligible.prefix(8))
-            for combo in combinations(candidates, size: min(stillNeeded, candidates.count)) {
+            for combo in candidates.combinations(size: min(stillNeeded, candidates.count)) {
                 let promoted = Set(eligible).union(Set(combo))
                 let spans = makeSpans(count: count, wide: promoted)
                 if simulate(spans: spans, columns: columns) == columns { return spans }

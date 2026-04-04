@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct NetworkViewModelTests {
     @Test func networkLabels_formatBytesPerSecond() async {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 1_048_576, bytesOutPerSecond: 524_288)]
         let viewModel = NetworkViewModel(monitor: monitor)
 
@@ -16,7 +16,7 @@ struct NetworkViewModelTests {
     }
 
     @Test func networkHistory_appendsSeparateInAndOut() async {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = [
             NetworkSnapshot(bytesInPerSecond: 100, bytesOutPerSecond: 200),
             NetworkSnapshot(bytesInPerSecond: 300, bytesOutPerSecond: 400)
@@ -43,7 +43,7 @@ struct NetworkViewModelTests {
     }
 
     @Test func normalizedGauge_capsAtOne() async {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 200_000_000, bytesOutPerSecond: 150_000_000)]
         let viewModel = NetworkViewModel(monitor: monitor)
 
@@ -55,7 +55,7 @@ struct NetworkViewModelTests {
     }
 
     @Test func normalizedGauge_belowCeiling() async {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 50_000_000, bytesOutPerSecond: 25_000_000)]
         let viewModel = NetworkViewModel(monitor: monitor)
 
@@ -67,7 +67,7 @@ struct NetworkViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 1_000_000, bytesOutPerSecond: 500_000)]
         let viewModel = NetworkViewModel(monitor: monitor)
 
@@ -81,7 +81,7 @@ struct NetworkViewModelTests {
     }
 
     @Test func networkLabels_zeroBytes_showsZeroKBps() {
-        let monitor = MockNetworkMonitor()
+        let monitor = MockMonitor<NetworkSnapshot>()
         monitor.snapshots = []
         let viewModel = NetworkViewModel(monitor: monitor)
         #expect(viewModel.inLabel == "0 KB/s")

@@ -41,4 +41,17 @@ struct DiskMonitorServiceTests {
         #expect(snapshot.total == 500_000_000_000)
         #expect(snapshot.available == 200_000_000_000)
     }
+
+    // MARK: - Service lifecycle
+
+    @Test @MainActor func service_conformsToProtocol() {
+        let service = DiskMonitorService()
+        let _: any MetricMonitorProtocol<DiskSnapshot> = service
+    }
+
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = DiskMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
 }

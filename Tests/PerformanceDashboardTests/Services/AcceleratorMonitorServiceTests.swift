@@ -10,7 +10,7 @@ struct AcceleratorMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = AcceleratorMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop() // Should not crash.
     }
 

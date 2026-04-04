@@ -20,4 +20,17 @@ struct GPUMonitorServiceTests {
         let snapshot = GPUSnapshot(usage: 0.65)
         #expect(snapshot.usage == 0.65)
     }
+
+    // MARK: - Service lifecycle
+
+    @Test @MainActor func service_conformsToProtocol() {
+        let service = GPUMonitorService()
+        let _: any MetricMonitorProtocol<GPUSnapshot> = service
+    }
+
+    @Test @MainActor func stream_canBeStartedAndStopped() {
+        let service = GPUMonitorService()
+        _ = service.stream()
+        service.stop()
+    }
 }

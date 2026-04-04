@@ -65,7 +65,7 @@ struct BatteryMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = BatteryMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop()
     }
 }

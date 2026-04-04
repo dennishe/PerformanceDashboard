@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct DiskViewModelTests {
     @Test func diskUsage_updatesFromStream() async {
-        let monitor = MockDiskMonitor()
+        let monitor = MockMonitor<DiskSnapshot>()
         monitor.snapshots = [DiskSnapshot(usage: 0.6, total: 500_000_000_000, available: 200_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
 
@@ -15,7 +15,7 @@ struct DiskViewModelTests {
     }
 
     @Test func diskAvailableLabel_usesByteCountFormatter() async {
-        let monitor = MockDiskMonitor()
+        let monitor = MockMonitor<DiskSnapshot>()
         monitor.snapshots = [DiskSnapshot(usage: 0.5, total: 1_000_000_000_000, available: 500_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
 
@@ -38,7 +38,7 @@ struct DiskViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockDiskMonitor()
+        let monitor = MockMonitor<DiskSnapshot>()
         monitor.snapshots = [DiskSnapshot(usage: 0.4, total: 500_000_000_000, available: 300_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
 

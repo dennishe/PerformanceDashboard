@@ -1,16 +1,7 @@
 import SwiftUI
 
-/// Threshold levels for Wi-Fi signal quality (higher = better).
-public struct WirelessThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case 0.5...: return .normal    // RSSI ≥ −65 dBm
-        case 0.36...: return .warning  // RSSI ~ −72 dBm
-        default:     return .critical  // Disconnected or very weak
-        }
-    }
-}
-
+/// Presents combined Wi-Fi and Bluetooth state.
+/// Consumes `WiFiMonitorService` and `BluetoothMonitorService` independently (SRP).
 @MainActor
 @Observable
 public final class WirelessViewModel {
@@ -37,9 +28,7 @@ public final class WirelessViewModel {
         return "\(rssi) dBm"
     }
 
-    public var ssidLabel: String? {
-        wifiSSID
-    }
+    public var ssidLabel: String? { wifiSSID }
 
     public var bluetoothLabel: String {
         guard bluetoothOn else { return "BT Off" }
@@ -51,36 +40,46 @@ public final class WirelessViewModel {
         return WirelessThreshold().level(for: gaugeValue ?? 0)
     }
 
-    private let monitor: any MetricMonitorProtocol<WirelessSnapshot>
-    private var task: Task<Void, Never>?
+    private let wifiMonitor: any MetricMonitorProtocol<WiFiSnapshot>
+    private let btMonitor: any MetricMonitorProtocol<BluetoothSnapshot>
+    private var wifiTask: Task<Void, Never>?
+    private var btTask: Task<Void, Never>?
 
-    public init(monitor: some MetricMonitorProtocol<WirelessSnapshot>) {
-        self.monitor = monitor
+    public init(
+        wifiMonitor: some MetricMonitorProtocol<WiFiSnapshot>,
+        btMonitor: some MetricMonitorProtocol<BluetoothSnapshot>
+    ) {
+        self.wifiMonitor = wifiMonitor
+        self.btMonitor = btMonitor
     }
 
     public func start() {
-        task = Task {
-            for await snapshot in monitor.stream() {
-                update(snapshot)
-            }
+        wifiTask = Task {
+            for await snapshot in wifiMonitor.stream() { receiveWiFi(snapshot) }
+        }
+        btTask = Task {
+            for await snapshot in btMonitor.stream() { receiveBluetooth(snapshot) }
         }
     }
 
     public func stop() {
-        task?.cancel()
-        monitor.stop()
+        wifiTask?.cancel()
+        btTask?.cancel()
+        wifiMonitor.stop()
+        btMonitor.stop()
     }
 
-    private func update(_ snapshot: WirelessSnapshot) {
-        wifiSSID = snapshot.wifiSSID
-        wifiRSSI = snapshot.wifiRSSI
-        wifiOn = snapshot.wifiOn
-        bluetoothConnectedCount = snapshot.bluetoothConnectedCount
-        bluetoothOn = snapshot.bluetoothOn
-        let normalized = snapshot.wifiRSSI.map {
-            WirelessViewModel.normaliseRSSI($0)
-        } ?? 0
+    private func receiveWiFi(_ snapshot: WiFiSnapshot) {
+        wifiSSID = snapshot.ssid
+        wifiRSSI = snapshot.rssi
+        wifiOn   = snapshot.on
+        let normalized = snapshot.rssi.map { WirelessViewModel.normaliseRSSI($0) } ?? 0
         history.append(normalized)
         if history.count > Constants.historySamples { history.removeFirst() }
+    }
+
+    private func receiveBluetooth(_ snapshot: BluetoothSnapshot) {
+        bluetoothConnectedCount = snapshot.connectedCount
+        bluetoothOn             = snapshot.on
     }
 }

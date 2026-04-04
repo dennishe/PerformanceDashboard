@@ -9,30 +9,9 @@ public struct GPUSnapshot: Sendable {
 }
 
 /// Monitors GPU utilisation via IOKit `PerformanceStatistics`.
-public final class GPUMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<GPUSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<GPUSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class GPUMonitorService: PollingMonitorBase<GPUSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<GPUSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<GPUSnapshot>.Continuation) async {
         while !Task.isCancelled {
             continuation.yield(GPUSnapshot(usage: GPUMonitorService.sample()))
             do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }

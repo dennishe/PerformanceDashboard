@@ -38,7 +38,7 @@ struct MediaEngineMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = MediaEngineMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop()
     }
 }

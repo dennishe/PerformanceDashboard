@@ -4,7 +4,7 @@ import Testing
 @MainActor
 struct MemoryViewModelTests {
     @Test func memoryUsage_updatesFromStream() async {
-        let monitor = MockMemoryMonitor()
+        let monitor = MockMonitor<MemorySnapshot>()
         monitor.snapshots = [MemorySnapshot(usage: 0.8, total: 16_000_000_000, used: 12_800_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
 
@@ -17,7 +17,7 @@ struct MemoryViewModelTests {
     }
 
     @Test func memoryUsageLabel_formatsToOneDecimal() async {
-        let monitor = MockMemoryMonitor()
+        let monitor = MockMonitor<MemorySnapshot>()
         monitor.snapshots = [MemorySnapshot(usage: 0.5, total: 8_000_000_000, used: 4_000_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
 
@@ -40,7 +40,7 @@ struct MemoryViewModelTests {
     }
 
     @Test func stop_haltsUpdates() async {
-        let monitor = MockMemoryMonitor()
+        let monitor = MockMonitor<MemorySnapshot>()
         monitor.snapshots = [MemorySnapshot(usage: 0.7, total: 8_000_000_000, used: 5_600_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
 

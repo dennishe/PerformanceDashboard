@@ -34,7 +34,7 @@ struct PowerMonitorServiceTests {
 
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = PowerMonitorService()
-        let _ = service.stream()
+        _ = service.stream()
         service.stop()
     }
 }

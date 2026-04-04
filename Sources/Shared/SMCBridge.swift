@@ -30,7 +30,7 @@ final class SMCBridge {
 
     /// Returns `(dataType, rawBytes)` for a 4-char SMC key, or `nil` if absent / error.
     func readBytes(key: String) -> (dataType: UInt32, bytes: [UInt8])? {
-        guard let keyCode = fourCC(key) else { return nil }
+        guard let keyCode = SMCBridge.fourCC(key) else { return nil }
 
         // Phase 1 — kSMCGetKeyInfo: learn dataType and dataSize
         var msg = SMCMessage()
@@ -80,9 +80,9 @@ final class SMCBridge {
     /// Handles `sp78` (signed 7.8 fixed-point) and `flt` (IEEE 754 single, LE).
     /// Falls back to `fpe2` (unsigned 14.2, fan RPM on older hardware).
     static func decodeFloat(_ result: (dataType: UInt32, bytes: [UInt8])) -> Double? {
-        let sp78Type = fourCCValue("sp78")
-        let fltType  = fourCCValue("flt ")
-        let fpe2Type = fourCCValue("fpe2")
+        let sp78Type = fourCC("sp78") ?? 0
+        let fltType  = fourCC("flt ") ?? 0
+        let fpe2Type = fourCC("fpe2") ?? 0
         switch result.dataType {
         case sp78Type: return sp78(result.bytes)
         case fltType:  return flt(result.bytes)
@@ -93,10 +93,15 @@ final class SMCBridge {
 
     // MARK: - Private
 
-    private static func fourCCValue(_ str: String) -> UInt32 {
-        let sc = Array(str.unicodeScalars)
-        guard sc.count == 4 else { return 0 }
-        return sc.enumerated().reduce(UInt32(0)) { $0 | (UInt32($1.element.value) << UInt32((3 - $1.offset) * 8)) }
+    /// Packs a 4-char ASCII string into a big-endian `UInt32` SMC key code.
+    /// Returns 0 if `str` is not exactly 4 ASCII characters; `nil` if used
+    /// as a failable instance variant (delegates to the static form).
+    static func fourCC(_ str: String) -> UInt32? {
+        let scalars = Array(str.unicodeScalars)
+        guard scalars.count == 4, scalars.allSatisfy({ $0.value < 128 }) else { return nil }
+        return scalars.enumerated().reduce(UInt32(0)) { acc, pair in
+            acc | (UInt32(pair.element.value) << UInt32((3 - pair.offset) * 8))
+        }
     }
 
     private func call(_ message: inout SMCMessage) -> IOReturn {
@@ -110,14 +115,6 @@ final class SMCBridge {
                     outPtr.baseAddress, &outSize
                 )
             }
-        }
-    }
-
-    private func fourCC(_ str: String) -> UInt32? {
-        let scalars = Array(str.unicodeScalars)
-        guard scalars.count == 4, scalars.allSatisfy({ $0.value < 128 }) else { return nil }
-        return scalars.enumerated().reduce(UInt32(0)) { acc, pair in
-            acc | (UInt32(pair.element.value) << UInt32((3 - pair.offset) * 8))
         }
     }
 }

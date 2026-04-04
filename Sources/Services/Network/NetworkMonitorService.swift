@@ -10,30 +10,9 @@ public struct NetworkSnapshot: Sendable {
 }
 
 /// Monitors network throughput by diffing `getifaddrs` byte counters.
-public final class NetworkMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<NetworkSnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<NetworkSnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class NetworkMonitorService: PollingMonitorBase<NetworkSnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<NetworkSnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<NetworkSnapshot>.Continuation) async {
         var previous = NetworkMonitorService.counters()
         while !Task.isCancelled {
             do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }

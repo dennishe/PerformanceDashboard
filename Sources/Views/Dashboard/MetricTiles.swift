@@ -2,48 +2,47 @@ import SwiftUI
 
 // Individual tile views for each metric.
 //
-// Wrapping each metric in its own `View` struct ensures SwiftUI's `@Observable`
-// dependency tracking is scoped per-tile: only the tile whose view model changed
-// re-renders, leaving all other tiles untouched.
+// Each type alias preserves SwiftUI's per-tile `@Observable` dependency tracking:
+// only the tile whose view model changes re-renders, leaving all others untouched.
+// `MonitorTileView` is the single generic implementation; all concrete tile names
+// are aliases so call-sites in `DashboardView` remain unchanged.
 
-// MARK: - CPU / GPU / Memory
+// MARK: - Generic tile wrapper
 
-struct CPUTileView: View {
-    let viewModel: CPUViewModel
+/// Renders a `MetricTileView` for any view model conforming to `MetricTilePresenting`.
+struct MonitorTileView<VM: MetricTilePresenting>: View {
+    let viewModel: VM
     var body: some View {
         MetricTileView(
-            title: "CPU", value: viewModel.usageLabel,
-            gaugeValue: viewModel.usage, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "cpu"
+            title: viewModel.tileTitle,
+            value: viewModel.tileValue,
+            gaugeValue: viewModel.tileGaugeValue,
+            history: viewModel.tileHistory,
+            thresholdLevel: viewModel.tileThresholdLevel,
+            subtitle: viewModel.tileSubtitle,
+            systemImage: viewModel.tileSystemImage
         )
     }
 }
 
-struct GPUTileView: View {
-    let viewModel: GPUViewModel
-    var body: some View {
-        MetricTileView(
-            title: "GPU", value: viewModel.usageLabel,
-            gaugeValue: viewModel.usage, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "display"
-        )
-    }
-}
+// MARK: - Concrete tile type aliases
 
-struct MemoryTileView: View {
-    let viewModel: MemoryViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Memory", value: viewModel.usageLabel,
-            gaugeValue: viewModel.usage, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: "\(viewModel.usedLabel) / \(viewModel.totalLabel)",
-            systemImage: "memorychip"
-        )
-    }
-}
+typealias CPUTileView      = MonitorTileView<CPUViewModel>
+typealias GPUTileView      = MonitorTileView<GPUViewModel>
+typealias MemoryTileView   = MonitorTileView<MemoryViewModel>
+typealias DiskTileView     = MonitorTileView<DiskViewModel>
+typealias PowerTileView    = MonitorTileView<PowerViewModel>
+typealias ThermalTileView  = MonitorTileView<ThermalViewModel>
+typealias FanTileView      = MonitorTileView<FanViewModel>
+typealias BatteryTileView  = MonitorTileView<BatteryViewModel>
+typealias WirelessTileView = MonitorTileView<WirelessViewModel>
 
-// MARK: - Network
+#if arch(arm64)
+typealias ANETileView         = MonitorTileView<AcceleratorViewModel>
+typealias MediaEngineTileView = MonitorTileView<MediaEngineViewModel>
+#endif
+
+// MARK: - Network tiles (two distinct tiles from one view model)
 
 struct NetworkInTileView: View {
     let viewModel: NetworkViewModel
@@ -63,111 +62,6 @@ struct NetworkOutTileView: View {
             title: "Net Out", value: viewModel.outLabel,
             gaugeValue: viewModel.outGauge, history: viewModel.historyOutGauge,
             thresholdLevel: viewModel.thresholdLevel, systemImage: "arrow.up.circle"
-        )
-    }
-}
-
-// MARK: - Disk
-
-struct DiskTileView: View {
-    let viewModel: DiskViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Disk", value: viewModel.usageLabel,
-            gaugeValue: viewModel.usage, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.availableLabel + " free",
-            systemImage: "internaldrive"
-        )
-    }
-}
-
-// MARK: - Accelerator (Apple Silicon only)
-
-#if arch(arm64)
-struct ANETileView: View {
-    let viewModel: AcceleratorViewModel
-    var body: some View {
-        MetricTileView(
-            title: "ANE", value: viewModel.usageLabel,
-            gaugeValue: viewModel.aneUsage, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "brain"
-        )
-    }
-}
-
-struct MediaEngineTileView: View {
-    let viewModel: MediaEngineViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Media Engine", value: viewModel.combinedLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.decodeLabel, systemImage: "film.stack"
-        )
-    }
-}
-#endif
-
-// MARK: - Power / Thermal / Fan
-
-struct PowerTileView: View {
-    let viewModel: PowerViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Power", value: viewModel.wattsLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "bolt"
-        )
-    }
-}
-
-struct ThermalTileView: View {
-    let viewModel: ThermalViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Temp", value: viewModel.cpuLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.gpuLabel, systemImage: "thermometer.medium"
-        )
-    }
-}
-
-struct FanTileView: View {
-    let viewModel: FanViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Fans", value: viewModel.primaryLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.subtitle, systemImage: "fan"
-        )
-    }
-}
-
-// MARK: - Battery / Wireless
-
-struct BatteryTileView: View {
-    let viewModel: BatteryViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Battery", value: viewModel.chargeLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.statusLabel, systemImage: "battery.100"
-        )
-    }
-}
-
-struct WirelessTileView: View {
-    let viewModel: WirelessViewModel
-    var body: some View {
-        MetricTileView(
-            title: "Wireless", value: viewModel.signalLabel,
-            gaugeValue: viewModel.gaugeValue, history: viewModel.history,
-            thresholdLevel: viewModel.thresholdLevel,
-            subtitle: viewModel.bluetoothLabel, systemImage: "wifi"
         )
     }
 }

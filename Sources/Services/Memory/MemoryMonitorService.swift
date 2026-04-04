@@ -12,30 +12,9 @@ public struct MemorySnapshot: Sendable {
 }
 
 /// Monitors memory pressure via `host_statistics64`.
-public final class MemoryMonitorService: MetricMonitorProtocol {
-    private var continuation: AsyncStream<MemorySnapshot>.Continuation?
-    private var task: Task<Void, Never>?
-
-    public init() {}
-
-    @MainActor
-    public func stream() -> AsyncStream<MemorySnapshot> {
-        AsyncStream { continuation in
-            self.continuation = continuation
-            self.task = Task {
-                await self.poll(continuation: continuation)
-            }
-        }
-    }
-
-    @MainActor
-    public func stop() {
-        task?.cancel()
-        continuation?.finish()
-    }
-
+public final class MemoryMonitorService: PollingMonitorBase<MemorySnapshot> {
     @MonitorActor
-    private func poll(continuation: AsyncStream<MemorySnapshot>.Continuation) async {
+    override public func poll(continuation: AsyncStream<MemorySnapshot>.Continuation) async {
         while !Task.isCancelled {
             if let snapshot = MemoryMonitorService.sample() {
                 continuation.yield(snapshot)
