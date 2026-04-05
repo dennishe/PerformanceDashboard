@@ -91,8 +91,8 @@ struct PowerViewModelTests {
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(viewModel.history.count == 1)
-        #expect(abs(viewModel.history[0] - 0.5) < 0.001)
+        #expect(viewModel.history.count == Constants.historySamples)
+        #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
 
     @Test func history_appendsZero_whenWattsIsNil() async {
@@ -101,8 +101,8 @@ struct PowerViewModelTests {
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(viewModel.history.count == 1)
-        #expect(viewModel.history[0] == 0)
+        #expect(viewModel.history.count == Constants.historySamples)
+        #expect(viewModel.history.last == 0)
     }
 
     @Test func stop_haltsUpdates() async {

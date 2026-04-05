@@ -23,9 +23,11 @@ public final class FanMonitorService: PollingMonitorBase<FanSnapshot> {
     override public func poll(continuation: AsyncStream<FanSnapshot>.Continuation) async {
         let smc = SMCBridge()
         defer { smc?.close() }
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             continuation.yield(FanSnapshot(fans: FanMonitorService.sample(smc)))
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

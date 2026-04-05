@@ -85,41 +85,83 @@ private struct TitlebarConfigurator: NSViewRepresentable {
 
             injectedView?.removeFromSuperview()
 
-            let hosting = NSHostingView(rootView: TitlebarTitleView())
-            hosting.translatesAutoresizingMaskIntoConstraints = false
-            titlebarContainer.addSubview(hosting)
+            let titleView = TitlebarStatusView()
+            titlebarContainer.addSubview(titleView)
             NSLayoutConstraint.activate([
-                hosting.centerYAnchor.constraint(equalTo: titlebarContainer.centerYAnchor),
-                hosting.leadingAnchor.constraint(equalTo: titlebarContainer.leadingAnchor,
-                                                 constant: 76)
+                titleView.centerYAnchor.constraint(equalTo: titlebarContainer.centerYAnchor),
+                titleView.leadingAnchor.constraint(equalTo: titlebarContainer.leadingAnchor,
+                                                   constant: 76)
             ])
-            injectedView = hosting
+            injectedView = titleView
         }
     }
 }
 
 // MARK: - Titlebar title view
 
-/// Standalone SwiftUI view embedded in the AppKit titlebar container.
-private struct TitlebarTitleView: View {
-    @State private var isPulsing = false
+/// Standalone AppKit view embedded in the titlebar container so the pulse animation
+/// runs in Core Animation rather than inside SwiftUI's render loop.
+private final class TitlebarStatusView: NSView {
+    private let label = NSTextField(labelWithString: "Performance")
+    private let dotView = NSView(frame: .zero)
 
-    var body: some View {
-        HStack(spacing: 7) {
-            Text("Performance")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary)
-            Circle()
-                .fill(Color.green)
-                .frame(width: 6, height: 6)
-                .shadow(color: .green.opacity(0.7), radius: 4)
-                .opacity(isPulsing ? 0.3 : 1.0)
-                .animation(
-                    .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                    value: isPulsing
-                )
-                .onAppear { isPulsing = true }
-        }
+    override var intrinsicContentSize: NSSize {
+        let labelSize = label.intrinsicContentSize
+        return NSSize(width: labelSize.width + 13, height: max(labelSize.height, 6))
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        translatesAutoresizingMaskIntoConstraints = false
+
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
+        label.textColor = .labelColor
+
+        dotView.translatesAutoresizingMaskIntoConstraints = false
+        dotView.wantsLayer = true
+        dotView.layer?.backgroundColor = NSColor.systemGreen.cgColor
+        dotView.layer?.cornerRadius = 3
+        dotView.layer?.shadowColor = NSColor.systemGreen.withAlphaComponent(0.7).cgColor
+        dotView.layer?.shadowRadius = 4
+        dotView.layer?.shadowOpacity = 1
+        dotView.layer?.shadowOffset = .zero
+
+        addSubview(label)
+        addSubview(dotView)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor),
+            label.centerYAnchor.constraint(equalTo: centerYAnchor),
+            dotView.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 7),
+            dotView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            dotView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            dotView.widthAnchor.constraint(equalToConstant: 6),
+            dotView.heightAnchor.constraint(equalToConstant: 6)
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        nil
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        startPulseIfNeeded()
+    }
+
+    private func startPulseIfNeeded() {
+        guard let dotLayer = dotView.layer, dotLayer.animation(forKey: "pulse") == nil else { return }
+
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 1.0
+        pulse.toValue = 0.3
+        pulse.duration = 1.2
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        dotLayer.add(pulse, forKey: "pulse")
     }
 }
 

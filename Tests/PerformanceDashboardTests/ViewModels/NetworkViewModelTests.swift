@@ -26,8 +26,10 @@ struct NetworkViewModelTests {
         viewModel.start()
         try? await Task.sleep(for: .milliseconds(100))
 
-        #expect(viewModel.historyIn.count == 2)
-        #expect(viewModel.historyOut.count == 2)
+        #expect(viewModel.historyIn.count == Constants.historySamples)
+        #expect(viewModel.historyOut.count == Constants.historySamples)
+        #expect(viewModel.historyIn.suffix(2).elementsEqual([100, 300]))
+        #expect(viewModel.historyOut.suffix(2).elementsEqual([200, 400]))
     }
 
     @Test func networkThreshold_normal_belowFiftyMB() {

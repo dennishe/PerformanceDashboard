@@ -2,17 +2,14 @@ import SwiftUI
 
 /// A reusable metric tile: icon + title header, ring gauge, value, subtitle, and sparkline.
 struct MetricTileView: View {
-    let title: String
-    let value: String
-    let gaugeValue: Double?
-    let history: [Double]
-    let thresholdLevel: ThresholdLevel
-    var subtitle: String?
-    var systemImage: String = "chart.xyaxis.line"
+    let model: MetricTileModel
 
-    private var color: Color { .threshold(thresholdLevel) }
+    private var color: Color { .threshold(model.thresholdLevel) }
     /// Secondary/grey when the metric is unavailable (nil gaugeValue).
-    private var gaugeColor: Color { gaugeValue == nil ? .secondary : color }
+    private var gaugeColor: Color { model.gaugeValue == nil ? .secondary : color }
+    private var layerColor: LayerColorComponents {
+        model.gaugeValue == nil ? .inactive : .threshold(model.thresholdLevel)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -20,15 +17,21 @@ struct MetricTileView: View {
             valueText
             subtitleText
             Spacer(minLength: 0)
-            SparklineView(history: history, color: gaugeColor)
-                .frame(height: 38)
+            SparklineView(
+                history: model.history,
+                color: layerColor,
+                accessibilityLabel: model.sparklineAccessibilityLabel,
+                accessibilityValue: model.value
+            )
+                .frame(height: SparklineGeometry.displayHeight)
         }
-        .padding(14)
+        .frame(height: MetricTileLayoutMetrics.contentHeight, alignment: .top)
+        .padding(MetricTileLayoutMetrics.padding)
         .background {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
                 .fill(Color.tileSurface)
                 .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
                 .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
         }
     }
@@ -37,31 +40,34 @@ struct MetricTileView: View {
 
     private var tileHeader: some View {
         HStack(alignment: .center, spacing: 5) {
-            Image(systemName: systemImage)
+            Image(systemName: model.systemImage)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(gaugeColor)
-            Text(title.uppercased())
+            Text(verbatim: model.displayTitle)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.5)
             Spacer(minLength: 0)
-            RingGaugeView(value: gaugeValue ?? 0, color: gaugeColor)
+            RingGaugeView(
+                value: model.gaugeValue ?? 0,
+                color: layerColor,
+                accessibilityLabel: model.gaugeAccessibilityLabel,
+                accessibilityValue: model.value
+            )
                 .frame(width: 34, height: 34)
         }
     }
 
     private var valueText: some View {
-        Text(value)
+        Text(verbatim: model.value)
             .font(.system(size: 26, weight: .semibold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(gaugeColor)
-            .accessibilityLabel(title)
-            .accessibilityValue(value)
     }
 
     @ViewBuilder private var subtitleText: some View {
-        if let subtitle {
-            Text(subtitle)
+        if let subtitle = model.subtitle {
+            Text(verbatim: subtitle)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
@@ -70,7 +76,7 @@ struct MetricTileView: View {
 }
 
 #Preview {
-    MetricTileView(
+    MetricTileView(model: MetricTileModel(
         title: "CPU",
         value: "42.3%",
         gaugeValue: 0.423,
@@ -78,7 +84,7 @@ struct MetricTileView: View {
         thresholdLevel: .normal,
         subtitle: "8 cores",
         systemImage: "cpu"
-    )
+    ))
     .frame(width: 220)
     .padding()
 }

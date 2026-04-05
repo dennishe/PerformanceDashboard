@@ -58,11 +58,19 @@ struct WindowHeightSizer: NSViewRepresentable {
 				width: currentContentRect.width,
 				height: targetContentHeight
 			)
-			lockWindowHeight(window, targetContentHeight: targetContentHeight)
 			let targetFrameHeight = window.frameRect(forContentRect: targetContentRect).height
 			let currentFrame = window.frame
+			let needsHeightLock = abs(window.contentMinSize.height - targetContentHeight) > 0.5
+				|| abs(window.contentMaxSize.height - targetContentHeight) > 0.5
+			let needsFrameUpdate = abs(currentFrame.height - targetFrameHeight) > 0.5
 
-			guard abs(currentFrame.height - targetFrameHeight) > 0.5 else { return }
+			guard needsHeightLock || needsFrameUpdate else { return }
+
+			if needsHeightLock {
+				lockWindowHeight(window, targetContentHeight: targetContentHeight)
+			}
+
+			guard needsFrameUpdate else { return }
 
 			let targetFrame = CGRect(
 				x: currentFrame.origin.x,

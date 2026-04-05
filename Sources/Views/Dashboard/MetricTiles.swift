@@ -13,15 +13,7 @@ import SwiftUI
 struct MonitorTileView<VM: MetricTilePresenting>: View {
     let viewModel: VM
     var body: some View {
-        MetricTileView(
-            title: viewModel.tileTitle,
-            value: viewModel.tileValue,
-            gaugeValue: viewModel.tileGaugeValue,
-            history: viewModel.tileHistory,
-            thresholdLevel: viewModel.tileThresholdLevel,
-            subtitle: viewModel.tileSubtitle,
-            systemImage: viewModel.tileSystemImage
-        )
+        MetricTileView(model: viewModel.tileModel)
     }
 }
 
@@ -47,21 +39,13 @@ typealias MediaEngineTileView = MonitorTileView<MediaEngineViewModel>
 struct NetworkInTileView: View {
     let viewModel: NetworkViewModel
     var body: some View {
-        MetricTileView(
-            title: "Net In", value: viewModel.inLabel,
-            gaugeValue: viewModel.inGauge, history: viewModel.historyInGauge,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "arrow.down.circle"
-        )
+        MetricTileView(model: viewModel.inTileModel)
     }
 }
 
 struct NetworkOutTileView: View {
     let viewModel: NetworkViewModel
     var body: some View {
-        MetricTileView(
-            title: "Net Out", value: viewModel.outLabel,
-            gaugeValue: viewModel.outGauge, history: viewModel.historyOutGauge,
-            thresholdLevel: viewModel.thresholdLevel, systemImage: "arrow.up.circle"
-        )
+        MetricTileView(model: viewModel.outTileModel)
     }
 }

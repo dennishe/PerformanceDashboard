@@ -1,56 +1,60 @@
 import SwiftUI
+import AppKit
 
-/// Reusable sparkline drawn with `Canvas` for performance.
-/// Renders a gradient-filled area chart beneath a smooth line.
+enum SparklineGeometry {
+    static let displayHeight: CGFloat = 38
+}
+
+/// Reusable sparkline rendered with layers so updates only change vector paths.
 struct SparklineView: View {
     let history: [Double]
-    let color: Color
+    let color: LayerColorComponents
+    let accessibilityLabel: String
+    let accessibilityValue: String
 
     var body: some View {
-        Canvas { context, size in
-            guard history.count > 1 else { return }
-            let maxValue = max(history.max() ?? 1, 0.001)
-            let step = size.width / Double(history.count - 1)
-            // Reserve 10% top padding so the line never clips to the edge.
-            let yScale = size.height * 0.88
+        SparklineRepresentable(history: history, color: color)
+            .equatable()
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityValue(accessibilityValue)
+    }
+}
 
-            var points: [CGPoint] = []
-            for (index, value) in history.enumerated() {
-                points.append(CGPoint(
-                    x: Double(index) * step,
-                    y: size.height - (value / maxValue) * yScale
-                ))
-            }
+private struct SparklineRepresentable: NSViewRepresentable, Equatable {
+    let history: [Double]
+    let color: LayerColorComponents
 
-            guard let first = points.first, let last = points.last else { return }
+    func makeNSView(context: Context) -> SparklineHostingView {
+        SparklineHostingView()
+    }
 
-            // Gradient fill below the line.
-            var fillPath = Path()
-            fillPath.move(to: CGPoint(x: first.x, y: size.height))
-            fillPath.addLine(to: first)
-            for point in points.dropFirst() { fillPath.addLine(to: point) }
-            fillPath.addLine(to: CGPoint(x: last.x, y: size.height))
-            fillPath.closeSubpath()
-            context.fill(fillPath, with: .linearGradient(
-                Gradient(colors: [color.opacity(0.22), color.opacity(0.02)]),
-                startPoint: CGPoint(x: 0, y: 0),
-                endPoint: CGPoint(x: 0, y: size.height)
-            ))
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        nsView: SparklineHostingView,
+        context: Context
+    ) -> CGSize? {
+        let width = proposal.width ?? nsView.bounds.width
+        return CGSize(width: width, height: proposal.height ?? SparklineGeometry.displayHeight)
+    }
 
-            // Line on top of the fill.
-            var linePath = Path()
-            linePath.move(to: first)
-            for point in points.dropFirst() { linePath.addLine(to: point) }
-            context.stroke(linePath, with: .color(color),
-                           style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-        }
-        .accessibilityLabel("Sparkline chart")
-        .accessibilityValue(history.last.map { String(format: "%.1f%%", $0 * 100) } ?? "No data")
+    func updateNSView(_ nsView: SparklineHostingView, context: Context) {
+        nsView.update(
+            history: history,
+            style: SparklineStyle(
+                color: color,
+                displayScale: context.environment.displayScale
+            )
+        )
     }
 }
 
 #Preview {
-    SparklineView(history: (0..<60).map { _ in Double.random(in: 0...1) }, color: .green)
+    SparklineView(
+        history: (0..<60).map { _ in Double.random(in: 0...1) },
+        color: .normal,
+        accessibilityLabel: "CPU history",
+        accessibilityValue: "42.0%"
+    )
         .frame(width: 200, height: 60)
         .padding()
 }

@@ -53,30 +53,30 @@ struct MenuBarMetricsView: View {
     private var systemGroup: some View {
         Group {
             MetricRow(icon: "cpu", tint: .blue, label: "CPU",
-                      value: cpuViewModel.usageLabel, level: cpuViewModel.thresholdLevel)
+                      value: cpuViewModel.tileModel.value, level: cpuViewModel.tileModel.thresholdLevel)
             MetricRow(icon: "display", tint: .purple, label: "GPU",
-                      value: gpuViewModel.usageLabel, level: gpuViewModel.thresholdLevel)
+                      value: gpuViewModel.tileModel.value, level: gpuViewModel.tileModel.thresholdLevel)
             MetricRow(icon: "memorychip", tint: .indigo, label: "Memory",
-                      value: memoryViewModel.usageLabel, level: memoryViewModel.thresholdLevel)
+                      value: memoryViewModel.tileModel.value, level: memoryViewModel.tileModel.thresholdLevel)
         }
     }
 
     private var networkGroup: some View {
         Group {
             MetricRow(icon: "arrow.down.circle.fill", tint: .teal, label: "Net In",
-                      value: networkViewModel.inLabel, level: .normal)
+                      value: networkViewModel.inTileModel.value, level: .normal)
             MetricRow(icon: "arrow.up.circle.fill", tint: .cyan, label: "Net Out",
-                      value: networkViewModel.outLabel, level: .normal)
+                      value: networkViewModel.outTileModel.value, level: .normal)
         }
     }
 
     private var storageGroup: some View {
         Group {
             MetricRow(icon: "internaldrive", tint: .orange, label: "Disk",
-                      value: diskViewModel.usageLabel, level: diskViewModel.thresholdLevel)
+                      value: diskViewModel.tileModel.value, level: diskViewModel.tileModel.thresholdLevel)
             #if arch(arm64)
             MetricRow(icon: "brain", tint: .mint, label: "ANE",
-                      value: acceleratorViewModel.usageLabel, level: acceleratorViewModel.thresholdLevel)
+                      value: acceleratorViewModel.tileModel.value, level: acceleratorViewModel.tileModel.thresholdLevel)
             #endif
         }
     }
@@ -131,7 +131,7 @@ private struct MetricRow: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.primary)
             Spacer()
-            Text(value)
+            Text(verbatim: value)
                 .font(.system(size: 13).monospacedDigit())
                 .fontWeight(.semibold)
                 .foregroundStyle(valueColor)

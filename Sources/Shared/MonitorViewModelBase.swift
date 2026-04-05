@@ -10,7 +10,8 @@ import SwiftUI
 @MainActor
 @Observable
 open class MonitorViewModelBase<Snapshot: Sendable> {
-    public private(set) var history: [Double] = []
+    @ObservationIgnored
+    public private(set) var history: [Double] = Constants.prefilledHistory
 
     private var monitorTask: Task<Void, Never>?
     private let _monitor: any MetricMonitorProtocol<Snapshot>
@@ -20,15 +21,19 @@ open class MonitorViewModelBase<Snapshot: Sendable> {
     }
 
     public func start() {
-        monitorTask = Task {
+        monitorTask = Task { [weak self] in
+            guard let self else { return }
             for await snapshot in _monitor.stream() {
-                receive(snapshot)
+                DashboardUpdateBatcher.shared.enqueue(owner: self) { [weak self] in
+                    self?.receive(snapshot)
+                }
             }
         }
     }
 
     public func stop() {
         monitorTask?.cancel()
+        DashboardUpdateBatcher.shared.cancel(owner: self)
         _monitor.stop()
     }
 
@@ -39,7 +44,11 @@ open class MonitorViewModelBase<Snapshot: Sendable> {
 
     /// Appends `value` to the sparkline history and trims to `Constants.historySamples`.
     func appendHistory(_ value: Double) {
-        history.append(value)
-        if history.count > Constants.historySamples { history.removeFirst() }
+        var updatedHistory = history
+        updatedHistory.append(value)
+        if updatedHistory.count > Constants.historySamples {
+            updatedHistory.removeFirst(updatedHistory.count - Constants.historySamples)
+        }
+        history = updatedHistory
     }
 }

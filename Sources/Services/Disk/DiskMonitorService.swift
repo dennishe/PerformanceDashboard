@@ -14,11 +14,13 @@ public struct DiskSnapshot: Sendable {
 public final class DiskMonitorService: PollingMonitorBase<DiskSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<DiskSnapshot>.Continuation) async {
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             if let snapshot = DiskMonitorService.sample() {
                 continuation.yield(snapshot)
             }
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

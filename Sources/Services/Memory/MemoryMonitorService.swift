@@ -15,11 +15,13 @@ public struct MemorySnapshot: Sendable {
 public final class MemoryMonitorService: PollingMonitorBase<MemorySnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<MemorySnapshot>.Continuation) async {
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             if let snapshot = MemoryMonitorService.sample() {
                 continuation.yield(snapshot)
             }
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

@@ -6,6 +6,7 @@ struct AppleSiliconPowerStrategy: PowerStrategy {
     private let ref: IOReportSubscriptionRef
     private let channels: CFMutableDictionary
     private var prevSample: CFDictionary?
+    private var channelDescriptors: [EnergyChannelDescriptor] = []
 
     init?() {
         guard let ch = IOReport.copyChannels(group: "Energy Model"),
@@ -25,27 +26,45 @@ struct AppleSiliconPowerStrategy: PowerStrategy {
 
     // MARK: - Private
 
-    private func extractWatts(from delta: CFDictionary) -> Double? {
+    private mutating func extractWatts(from delta: CFDictionary) -> Double? {
         let nsDict = delta as NSDictionary
         guard let array = nsDict["IOReportChannels"] as? [NSDictionary] else { return nil }
+
+        if channelDescriptors.isEmpty {
+            channelDescriptors = EnergyChannelDescriptor.makeDescriptors(from: array)
+        }
+
+        guard !channelDescriptors.isEmpty else { return nil }
 
         // "CPU Energy" is in millijoules; all other "*Energy" channels are in nanojoules.
         // Per-core channels are already covered by "CPU Energy" — skip to avoid double-counting.
         var watts: Double = 0
         var found = false
-        for channel in array {
-            let name = IOReport.channelName(channel as CFDictionary) ?? ""
-            let val = IOReport.integerValue(channel as CFDictionary)
+        for descriptor in channelDescriptors where descriptor.index < array.count {
+            let val = IOReport.integerValue(array[descriptor.index] as CFDictionary)
             guard val != Int64.min, val >= 0 else { continue }
-            if name == "CPU Energy" {
-                watts += Double(val) / 1_000.0
-                found = true
-            } else if name.hasSuffix("Energy") {
-                watts += Double(val) / 1_000_000_000.0
-                found = true
-            }
+            watts += Double(val) * descriptor.scale
+            found = true
         }
         return found ? watts : nil
+    }
+}
+
+private struct EnergyChannelDescriptor {
+    let index: Int
+    let scale: Double
+
+    static func makeDescriptors(from channels: [NSDictionary]) -> [EnergyChannelDescriptor] {
+        channels.enumerated().compactMap { index, channel in
+            let name = IOReport.channelName(channel as CFDictionary) ?? ""
+            if name == "CPU Energy" {
+                return EnergyChannelDescriptor(index: index, scale: 1 / 1_000.0)
+            }
+            if name.hasSuffix("Energy") {
+                return EnergyChannelDescriptor(index: index, scale: 1 / 1_000_000_000.0)
+            }
+            return nil
+        }
     }
 }
 #endif

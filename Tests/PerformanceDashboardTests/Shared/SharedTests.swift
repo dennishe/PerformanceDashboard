@@ -25,3 +25,13 @@ struct ConstantsTests {
         #expect(Constants.historySamples == 60)
     }
 }
+
+struct DashboardGridMetricsTests {
+    @Test func rowCount_countsExactFullRows() {
+        #expect(DashboardGridMetrics.rowCount(spans: [1, 1, 1, 1], columns: 2) == 2)
+    }
+
+    @Test func rowCount_countsWrappedRows() {
+        #expect(DashboardGridMetrics.rowCount(spans: [2, 1, 2, 1, 1], columns: 3) == 3)
+    }
+}

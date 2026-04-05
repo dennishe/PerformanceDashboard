@@ -21,13 +21,15 @@ public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnap
         sampler.setUp()
         var ane = ANEState(sampler: sampler)
         #endif
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             #if arch(arm64)
             continuation.yield(AcceleratorSnapshot(aneUsage: ane.nextUsage()))
             #else
             continuation.yield(AcceleratorSnapshot(aneUsage: nil))
             #endif
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 }

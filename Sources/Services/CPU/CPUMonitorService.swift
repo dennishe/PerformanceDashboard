@@ -11,11 +11,13 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<CPUSnapshot>.Continuation) async {
         var previous: [processor_cpu_load_info] = []
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             let (current, usage) = CPUMonitorService.sample(previous: previous)
             previous = current
             continuation.yield(CPUSnapshot(usage: usage))
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

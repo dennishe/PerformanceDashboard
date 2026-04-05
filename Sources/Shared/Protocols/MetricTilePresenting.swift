@@ -4,11 +4,5 @@
 /// without enumerating concrete types in the dashboard layout.
 @MainActor
 public protocol MetricTilePresenting: AnyObject {
-    var tileTitle: String { get }
-    var tileValue: String { get }
-    var tileGaugeValue: Double? { get }
-    var tileHistory: [Double] { get }
-    var tileThresholdLevel: ThresholdLevel { get }
-    var tileSubtitle: String? { get }
-    var tileSystemImage: String { get }
+    var tileModel: MetricTileModel { get }
 }

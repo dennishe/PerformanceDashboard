@@ -61,8 +61,8 @@ struct BatteryViewModelThresholdTests {
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(viewModel.history.count == 1)
-        #expect(viewModel.history[0] == 0.75)
+        #expect(viewModel.history.count == Constants.historySamples)
+        #expect(viewModel.history.last == 0.75)
     }
 
     @Test func stop_haltsUpdates() async {

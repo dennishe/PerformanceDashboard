@@ -5,12 +5,15 @@ struct PerformanceDashboardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     @State private var services = ServiceContainer()
+    @State private var isDashboardWindowVisible = true
     @State private var monitorsStarted = false
 
     var body: some Scene {
         Window("Performance Dashboard", id: "main") {
-            DashboardView(services: services)
-                .frame(minWidth: Constants.dashboardMinimumWindowWidth)
+            DashboardSceneView(
+                services: services,
+                isWindowVisible: $isDashboardWindowVisible
+            )
                 .task {
                     guard !monitorsStarted else { return }
                     monitorsStarted = true
@@ -22,7 +25,6 @@ struct PerformanceDashboardApp: App {
             width: Constants.dashboardDefaultWindowWidth,
             height: Constants.dashboardDefaultWindowHeight
         )
-        .windowResizability(.contentMinSize)
 
         MenuBarExtra("Performance Dashboard", systemImage: "gauge") {
             MenuBarMetricsView(

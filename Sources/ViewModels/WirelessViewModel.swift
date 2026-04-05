@@ -5,35 +5,41 @@ import SwiftUI
 @MainActor
 @Observable
 public final class WirelessViewModel {
+    public private(set) var tileModel = MetricTileModel(
+        title: "Wireless",
+        value: "Wi-Fi Off",
+        gaugeValue: nil,
+        history: Constants.prefilledHistory,
+        thresholdLevel: .inactive,
+        subtitle: "BT Off",
+        systemImage: "wifi"
+    )
+
+    @ObservationIgnored
     public private(set) var wifiSSID: String?
+    @ObservationIgnored
     public private(set) var wifiRSSI: Int?
+    @ObservationIgnored
     public private(set) var wifiOn: Bool = false
+    @ObservationIgnored
     public private(set) var bluetoothConnectedCount: Int = 0
+    @ObservationIgnored
     public private(set) var bluetoothOn: Bool = false
-    public private(set) var history: [Double] = []
+    @ObservationIgnored
+    public private(set) var history: [Double] = Constants.prefilledHistory
+    @ObservationIgnored
+    public private(set) var gaugeValue: Double?
+    @ObservationIgnored
+    public private(set) var signalLabel: String = "Wi-Fi Off"
+    @ObservationIgnored
+    public private(set) var bluetoothLabel: String = "BT Off"
 
     /// Normalises RSSI from [−100, −30] dBm → [0, 1].
     private static func normaliseRSSI(_ rssi: Int) -> Double {
         min(1.0, max(0.0, Double(rssi + 100) / 70.0))
     }
 
-    public var gaugeValue: Double? {
-        guard wifiOn, let rssi = wifiRSSI else { return wifiOn ? 0 : nil }
-        return WirelessViewModel.normaliseRSSI(rssi)
-    }
-
-    public var signalLabel: String {
-        guard wifiOn else { return "Wi-Fi Off" }
-        guard let rssi = wifiRSSI else { return "Disconnected" }
-        return "\(rssi) dBm"
-    }
-
     public var ssidLabel: String? { wifiSSID }
-
-    public var bluetoothLabel: String {
-        guard bluetoothOn else { return "BT Off" }
-        return "BT: \(bluetoothConnectedCount) connected"
-    }
 
     public var thresholdLevel: ThresholdLevel {
         guard wifiOn, wifiRSSI != nil else { return .inactive }
@@ -54,17 +60,28 @@ public final class WirelessViewModel {
     }
 
     public func start() {
-        wifiTask = Task {
-            for await snapshot in wifiMonitor.stream() { receiveWiFi(snapshot) }
+        wifiTask = Task { [weak self] in
+            guard let self else { return }
+            for await snapshot in wifiMonitor.stream() {
+                DashboardUpdateBatcher.shared.enqueue(owner: self, lane: "wifi") { [weak self] in
+                    self?.receiveWiFi(snapshot)
+                }
+            }
         }
-        btTask = Task {
-            for await snapshot in btMonitor.stream() { receiveBluetooth(snapshot) }
+        btTask = Task { [weak self] in
+            guard let self else { return }
+            for await snapshot in btMonitor.stream() {
+                DashboardUpdateBatcher.shared.enqueue(owner: self, lane: "bluetooth") { [weak self] in
+                    self?.receiveBluetooth(snapshot)
+                }
+            }
         }
     }
 
     public func stop() {
         wifiTask?.cancel()
         btTask?.cancel()
+        DashboardUpdateBatcher.shared.cancel(owner: self)
         wifiMonitor.stop()
         btMonitor.stop()
     }
@@ -74,12 +91,72 @@ public final class WirelessViewModel {
         wifiRSSI = snapshot.rssi
         wifiOn   = snapshot.on
         let normalized = snapshot.rssi.map { WirelessViewModel.normaliseRSSI($0) } ?? 0
-        history.append(normalized)
-        if history.count > Constants.historySamples { history.removeFirst() }
+        gaugeValue = snapshot.on ? (snapshot.rssi.map { WirelessViewModel.normaliseRSSI($0) } ?? 0) : nil
+        signalLabel = Self.makeSignalLabel(wifiOn: snapshot.on, rssi: snapshot.rssi)
+        history = updatedHistory(from: history, adding: normalized)
+        let newTileModel = Self.makeTileModel(
+            signalLabel: signalLabel,
+            gaugeValue: gaugeValue,
+            history: history,
+            thresholdLevel: thresholdLevel,
+            bluetoothLabel: bluetoothLabel
+        )
+        if tileModel != newTileModel {
+            tileModel = newTileModel
+        }
     }
 
     private func receiveBluetooth(_ snapshot: BluetoothSnapshot) {
         bluetoothConnectedCount = snapshot.connectedCount
         bluetoothOn             = snapshot.on
+        bluetoothLabel = Self.makeBluetoothLabel(on: snapshot.on, connectedCount: snapshot.connectedCount)
+        let newTileModel = Self.makeTileModel(
+            signalLabel: signalLabel,
+            gaugeValue: gaugeValue,
+            history: history,
+            thresholdLevel: thresholdLevel,
+            bluetoothLabel: bluetoothLabel
+        )
+        if tileModel != newTileModel {
+            tileModel = newTileModel
+        }
+    }
+
+    private static func makeTileModel(
+        signalLabel: String,
+        gaugeValue: Double?,
+        history: [Double],
+        thresholdLevel: ThresholdLevel,
+        bluetoothLabel: String
+    ) -> MetricTileModel {
+        MetricTileModel(
+            title: "Wireless",
+            value: signalLabel,
+            gaugeValue: gaugeValue,
+            history: history,
+            thresholdLevel: thresholdLevel,
+            subtitle: bluetoothLabel,
+            systemImage: "wifi"
+        )
+    }
+
+    private func updatedHistory(from history: [Double], adding value: Double) -> [Double] {
+        var updatedHistory = history
+        updatedHistory.append(value)
+        if updatedHistory.count > Constants.historySamples {
+            updatedHistory.removeFirst(updatedHistory.count - Constants.historySamples)
+        }
+        return updatedHistory
+    }
+
+    private static func makeSignalLabel(wifiOn: Bool, rssi: Int?) -> String {
+        guard wifiOn else { return "Wi-Fi Off" }
+        guard let rssi else { return "Disconnected" }
+        return "\(rssi) dBm"
+    }
+
+    private static func makeBluetoothLabel(on: Bool, connectedCount: Int) -> String {
+        guard on else { return "BT Off" }
+        return "BT: \(connectedCount) connected"
     }
 }

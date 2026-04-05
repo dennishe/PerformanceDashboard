@@ -14,10 +14,12 @@ public struct BluetoothSnapshot: Sendable {
 public final class BluetoothMonitorService: PollingMonitorBase<BluetoothSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<BluetoothSnapshot>.Continuation) async {
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             let snapshot = await sampleOnMain()
             continuation.yield(snapshot)
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

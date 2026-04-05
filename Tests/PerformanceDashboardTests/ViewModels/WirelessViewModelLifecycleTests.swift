@@ -10,8 +10,8 @@ struct WirelessViewModelLifecycleTests {
         let viewModel = WirelessViewModel(wifiMonitor: wifiMock, btMonitor: btMock)
         viewModel.start()
         try? await Task.sleep(for: .milliseconds(50))
-        #expect(viewModel.history.count == 1)
-        #expect(abs(viewModel.history[0] - 0.5) < 0.001) // (-65+100)/70 = 0.5
+        #expect(viewModel.history.count == Constants.historySamples)
+        #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001) // (-65+100)/70 = 0.5
     }
 
     @Test func stop_haltsUpdates() async {

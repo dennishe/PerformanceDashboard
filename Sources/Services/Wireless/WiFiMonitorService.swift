@@ -17,9 +17,11 @@ public final class WiFiMonitorService: PollingMonitorBase<WiFiSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<WiFiSnapshot>.Continuation) async {
         let client = CWWiFiClient.shared()
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             continuation.yield(sample(client))
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

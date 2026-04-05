@@ -24,9 +24,11 @@ public struct BatterySnapshot: Sendable {
 public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<BatterySnapshot>.Continuation) async {
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             continuation.yield(BatteryMonitorService.sample())
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

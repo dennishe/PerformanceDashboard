@@ -13,9 +13,11 @@ public final class PowerMonitorService: PollingMonitorBase<PowerSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<PowerSnapshot>.Continuation) async {
         var strategy = PowerMonitorService.defaultStrategy()
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             continuation.yield(PowerSnapshot(watts: strategy.nextWatts()))
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 

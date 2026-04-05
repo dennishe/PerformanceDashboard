@@ -1,7 +1,7 @@
 import Foundation
 
 /// Threshold levels used for colour-coding metric tiles.
-public enum ThresholdLevel {
+public enum ThresholdLevel: Equatable, Sendable {
     case normal
     case warning
     case critical

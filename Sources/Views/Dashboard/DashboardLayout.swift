@@ -52,25 +52,35 @@ struct DashboardLayout: Layout {
         guard !subviews.isEmpty else { return }
         let avail = max(0, bounds.width - 2 * padding)
         populate(&cache, availableWidth: avail, subviews: subviews)
-        guard let entry = cache.entries[avail] else { return }
+        guard let entry = cache.entries[avail], !entry.rowHeightValues.isEmpty else { return }
         reportContentHeightIfNeeded(totalHeight(for: entry), cache: &cache)
         var col = 0, row = 0
         var rowY = bounds.minY + padding
         for (index, subview) in subviews.enumerated() {
             let span = entry.spans[index]
-            if col + span > entry.columns { rowY += entry.rowHeightValues[row] + spacing; col = 0; row += 1 }
+            if col + span > entry.columns {
+                guard row < entry.rowHeightValues.count else { break }
+                rowY += entry.rowHeightValues[row] + spacing
+                col = 0
+                row += 1
+            }
+            guard row < entry.rowHeightValues.count else { break }
+            let rowHeight = entry.rowHeightValues[row]
             let tileW2 = CGFloat(span) * entry.tileWidth + CGFloat(span - 1) * spacing
             subview.place(
                 at: CGPoint(x: bounds.minX + padding + CGFloat(col) * (entry.tileWidth + spacing), y: rowY),
-                proposal: ProposedViewSize(width: tileW2, height: entry.rowHeightValues[row])
+                proposal: ProposedViewSize(width: tileW2, height: rowHeight)
             )
             col += span
-            if col == entry.columns { rowY += entry.rowHeightValues[row] + spacing; col = 0; row += 1 }
+            if col == entry.columns {
+                rowY += rowHeight + spacing
+                col = 0
+                row += 1
+            }
         }
     }
 
-    // Returning nil short-circuits SwiftUI's default explicitAlignment implementation, which
-    // would otherwise call placeSubviews on every alignment-guide query during layout.
+    // Returning nil avoids SwiftUI's default explicitAlignment path calling placeSubviews again.
     func explicitAlignment(
         of guide: HorizontalAlignment, in bounds: CGRect,
         proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache
@@ -80,9 +90,6 @@ struct DashboardLayout: Layout {
         proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache
     ) -> CGFloat? { nil }
 }
-
-// MARK: - Private Helpers
-
 private extension DashboardLayout {
     func totalHeight(for entry: DashboardLayoutEntry) -> CGFloat {
         entry.rowHeightValues.reduce(0, +)
@@ -114,7 +121,7 @@ private extension DashboardLayout {
             columns: cols,
             tileWidth: tileW,
             spans: spans,
-            rowHeightValues: rowHeights(subviews: subviews, spans: spans, tileW: tileW, columns: cols)
+            rowHeightValues: rowHeights(spans: spans, columns: cols)
         )
     }
 
@@ -179,19 +186,11 @@ private extension DashboardLayout {
         return makeSpans(count: count, wide: Set((0..<count).prefix(extra)))
     }
 
-    /// Computes the max tile height per row, respecting spans and reflow.
-    func rowHeights(subviews: Subviews, spans: [Int], tileW: CGFloat, columns: Int) -> [CGFloat] {
-        var heights: [CGFloat] = []
-        var col = 0, rowMaxH: CGFloat = 0
-        for (index, subview) in subviews.enumerated() {
-            let span = spans[index]
-            if col + span > columns { heights.append(rowMaxH); col = 0; rowMaxH = 0 }
-            let width = CGFloat(span) * tileW + CGFloat(span - 1) * spacing
-            rowMaxH = max(rowMaxH, subview.sizeThatFits(ProposedViewSize(width: width, height: nil)).height)
-            col += span
-            if col == columns { heights.append(rowMaxH); rowMaxH = 0; col = 0 }
-        }
-        if rowMaxH > 0 { heights.append(rowMaxH) }
-        return heights
+    /// Metric tiles are intentionally fixed-height, so row height depends only on row count.
+    func rowHeights(spans: [Int], columns: Int) -> [CGFloat] {
+        Array(
+            repeating: MetricTileLayoutMetrics.height,
+            count: DashboardGridMetrics.rowCount(spans: spans, columns: columns)
+        )
     }
 }

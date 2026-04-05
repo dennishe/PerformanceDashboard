@@ -23,6 +23,7 @@ public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnap
         sampler.setUp()
         let state = MediaEngineState(sampler: sampler)
         #endif
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             #if arch(arm64)
             let snapshot = state.nextSnapshot()
@@ -31,7 +32,8 @@ public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnap
             let snapshot = MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
             #endif
             continuation.yield(snapshot)
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 }

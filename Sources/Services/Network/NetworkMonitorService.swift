@@ -14,13 +14,15 @@ public final class NetworkMonitorService: PollingMonitorBase<NetworkSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<NetworkSnapshot>.Continuation) async {
         var previous = NetworkMonitorService.counters()
+        var nextPoll = PollingCadence.initialDeadline()
         while !Task.isCancelled {
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
             let current = NetworkMonitorService.counters()
             let inBytes  = Double(max(0, Int64(bitPattern: current.0) - Int64(bitPattern: previous.0)))
             let outBytes = Double(max(0, Int64(bitPattern: current.1) - Int64(bitPattern: previous.1)))
             continuation.yield(NetworkSnapshot(bytesInPerSecond: inBytes, bytesOutPerSecond: outBytes))
             previous = current
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
         }
     }
 

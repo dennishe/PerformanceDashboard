@@ -23,9 +23,11 @@ public final class ThermalMonitorService: PollingMonitorBase<ThermalSnapshot> {
     override public func poll(continuation: AsyncStream<ThermalSnapshot>.Continuation) async {
         let smc = SMCBridge()
         defer { smc?.close() }
+        var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             continuation.yield(ThermalMonitorService.sample(smc))
-            do { try await Task.sleep(for: Constants.pollingInterval) } catch { break }
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
     }
 
