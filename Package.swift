@@ -8,6 +8,9 @@ let package = Package(
         .executableTarget(
             name: "PerformanceDashboard",
             path: "Sources",
+            resources: [
+                .process("AppIcon.png")
+            ],
             swiftSettings: [
                 .unsafeFlags(["-strict-concurrency=complete"])
             ],

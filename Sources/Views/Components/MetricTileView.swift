@@ -19,6 +19,7 @@ struct MetricTileView: View {
             tileHeader
             valueText
             subtitleText
+            Spacer(minLength: 0)
             SparklineView(history: history, color: gaugeColor)
                 .frame(height: 38)
         }

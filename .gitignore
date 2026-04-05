@@ -22,6 +22,11 @@ DerivedData/
 *.profdata
 *.profraw
 
+# Release artifacts
+dist/
+*.pkg
+Resources/AppIcon.icns
+
 # macOS
 .DS_Store
 .AppleDouble

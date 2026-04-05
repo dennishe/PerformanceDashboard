@@ -7,6 +7,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, @unchecked Sendable {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        applyAppIcon()
+    }
+
+    // Sets the Dock icon from the SPM resource bundle. This is needed when
+    // running via `swift run` where no .app bundle exists to supply the icon.
+    private func applyAppIcon() {
+        guard
+            let url = Bundle.module.url(forResource: "AppIcon", withExtension: "png"),
+            let icon = NSImage(contentsOf: url)
+        else { return }
+        NSApp.applicationIconImage = icon
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
