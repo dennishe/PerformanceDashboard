@@ -105,6 +105,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<PLIST
     <key>CFBundleVersion</key>            <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key> <string>${VERSION}</string>
     <key>LSMinimumSystemVersion</key>     <string>${MIN_MACOS}</string>
+    <key>NSBluetoothAlwaysUsageDescription</key>
+    <string>PerformanceDashboard reads Bluetooth device state to show paired and connected device counts.</string>
     <key>NSPrincipalClass</key>           <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>    <true/>${ICON_FILE_ENTRY}
 </dict>

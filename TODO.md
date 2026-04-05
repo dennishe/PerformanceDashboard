@@ -29,9 +29,6 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 
 ## 🟡 UI/UX
 
-- [ ] **6. Verify all 7 tiles fit on a 13" display without scrolling**  
-  Run the app at 1280×800, check nothing clips. Tune the `minimum` adaptive grid size if needed.
-
 - [x] **7. Enforce minimum window size** *(fixed)*  
   Added `.frame(minWidth: 730, minHeight: 400)` on the root view and `.windowResizability(.contentMinSize)` on the scene.
 
@@ -68,8 +65,8 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
   The current dashboard works well for scanning, but every metric is compressed into the same small footprint. Add a drill-down interaction so clicking a tile opens a richer metric-specific view with a larger chart, more historical context, and derived stats that do not fit in the dashboard grid.
 
   Suggested scope:
-  - Clicking a tile opens a sheet, popover, or secondary panel anchored to the selected metric.
-  - Show a larger sparkline or time-series chart with selectable ranges such as 60 seconds, 5 minutes, and 15 minutes.
+  - Clicking a tile animates the tile to fill more tiles or the whole app, depending on what to show.
+  - Show a larger sparkline or time-series chart with selectable ranges such as 60 seconds, 5 minutes, and 15 minutes, or depending on context more detailed information that is not already visible. F.ex. what app is causing the load or for the battery tile, if possible, show other attached battery devices such as mice or wireless keyboards.
   - Add metric-specific secondary values. Examples: CPU user/system split, Memory used/wired/compressed, Disk free space trend, Wi-Fi RSSI plus channel, Battery health and cycle count.
   - Keep the implementation aligned with the existing MVVM split by adding per-metric detail presenters or a reusable detail model rather than embedding formatting logic directly in the view.
 
