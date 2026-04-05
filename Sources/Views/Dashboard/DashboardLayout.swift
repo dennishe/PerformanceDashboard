@@ -1,18 +1,5 @@
 import SwiftUI
 
-// MARK: - Wide Eligibility
-
-private struct WideEligibleKey: LayoutValueKey {
-    static let defaultValue = false
-}
-
-extension View {
-    /// Marks a tile as eligible to grow to two columns when the layout needs to fill the last row.
-    func wideEligible() -> some View {
-        layoutValue(key: WideEligibleKey.self, value: true)
-    }
-}
-
 // MARK: - DashboardLayout
 /// Per-width layout result cached inside `DashboardLayout.Cache`.
 struct DashboardLayoutEntry: Sendable {
@@ -22,14 +9,13 @@ struct DashboardLayoutEntry: Sendable {
     let rowHeightValues: [CGFloat]
 }
 
-/// Adaptive grid that promotes wide-eligible tiles to span two columns so the last row is always full.
-/// The number of columns is derived from the container width and `minTileWidth`.
-/// Eligible tiles are tried in all combinations (lex order) until simulation confirms no reflow gap;
-/// non-eligible tiles are used as fallback when there are not enough eligible ones.
+/// Adaptive grid that promotes wide-eligible tiles to fill the last row without gaps.
+/// Columns are derived from the container width and `minTileWidth`.
 struct DashboardLayout: Layout {
     var spacing: CGFloat = 12
     var minTileWidth: CGFloat = 200
     var padding: CGFloat = 16
+    var onContentHeightChange: (@MainActor @Sendable (CGFloat) -> Void)?
 
     // MARK: Cache
 
@@ -37,6 +23,7 @@ struct DashboardLayout: Layout {
         var subviewCount: Int = 0
         // Keyed by available width so minSize probes never evict the display-width entry.
         var entries: [CGFloat: DashboardLayoutEntry] = [:]
+        var lastReportedHeight: CGFloat?
     }
 
     func makeCache(subviews: Subviews) -> Cache {
@@ -58,9 +45,7 @@ struct DashboardLayout: Layout {
         let avail = max(0, (proposal.width ?? 800) - 2 * padding)
         populate(&cache, availableWidth: avail, subviews: subviews)
         guard let entry = cache.entries[avail] else { return .zero }
-        let total = entry.rowHeightValues.reduce(0, +)
-            + CGFloat(max(entry.rowHeightValues.count - 1, 0)) * spacing
-        return CGSize(width: avail + 2 * padding, height: total + 2 * padding)
+        return CGSize(width: avail + 2 * padding, height: totalHeight(for: entry))
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
@@ -68,6 +53,7 @@ struct DashboardLayout: Layout {
         let avail = max(0, bounds.width - 2 * padding)
         populate(&cache, availableWidth: avail, subviews: subviews)
         guard let entry = cache.entries[avail] else { return }
+        reportContentHeightIfNeeded(totalHeight(for: entry), cache: &cache)
         var col = 0, row = 0
         var rowY = bounds.minY + padding
         for (index, subview) in subviews.enumerated() {
@@ -98,6 +84,25 @@ struct DashboardLayout: Layout {
 // MARK: - Private Helpers
 
 private extension DashboardLayout {
+    func totalHeight(for entry: DashboardLayoutEntry) -> CGFloat {
+        entry.rowHeightValues.reduce(0, +)
+            + CGFloat(max(entry.rowHeightValues.count - 1, 0)) * spacing
+            + 2 * padding
+    }
+
+    func reportContentHeightIfNeeded(_ height: CGFloat, cache: inout Cache) {
+        guard let onContentHeightChange else { return }
+        let roundedHeight = height.rounded(.up)
+        if let lastReportedHeight = cache.lastReportedHeight,
+           abs(lastReportedHeight - roundedHeight) < 0.5 {
+            return
+        }
+        cache.lastReportedHeight = roundedHeight
+        Task { @MainActor in
+            onContentHeightChange(roundedHeight)
+        }
+    }
+
     /// Fills (or reuses) the cache entry for the given available width.
     /// Entries are keyed by width so different size proposals never evict each other.
     func populate(_ cache: inout Cache, availableWidth: CGFloat, subviews: Subviews) {

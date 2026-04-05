@@ -10,7 +10,7 @@ struct PerformanceDashboardApp: App {
     var body: some Scene {
         Window("Performance Dashboard", id: "main") {
             DashboardView(services: services)
-                .frame(minWidth: 900, minHeight: 500)
+                .frame(minWidth: Constants.dashboardMinimumWindowWidth)
                 .task {
                     guard !monitorsStarted else { return }
                     monitorsStarted = true
@@ -18,7 +18,10 @@ struct PerformanceDashboardApp: App {
                 }
         }
         .windowStyle(.titleBar)
-        .defaultSize(width: 1200, height: 800)
+        .defaultSize(
+            width: Constants.dashboardDefaultWindowWidth,
+            height: Constants.dashboardDefaultWindowHeight
+        )
         .windowResizability(.contentMinSize)
 
         MenuBarExtra("Performance Dashboard", systemImage: "gauge") {

@@ -5,8 +5,14 @@ import AppKit
 struct DashboardView: View {
     let services: ServiceContainer
 
+    @State private var contentHeight = Constants.dashboardMinimumContentHeight
+
     var body: some View {
-        DashboardLayout(spacing: 12, minTileWidth: 220) {
+        DashboardLayout(
+            spacing: 12,
+            minTileWidth: 220,
+            onContentHeightChange: updateContentHeight
+        ) {
             CPUTileView(viewModel: services.cpu).wideEligible()
             GPUTileView(viewModel: services.gpu).wideEligible()
             MemoryTileView(viewModel: services.memory).wideEligible()
@@ -25,6 +31,19 @@ struct DashboardView: View {
         }
         .background(Color.dashboardBackground.ignoresSafeArea())
         .background(TitlebarConfigurator())
+        .background(
+            WindowHeightSizer(
+                contentHeight: contentHeight,
+                minContentHeight: Constants.dashboardMinimumContentHeight
+            )
+        )
+    }
+
+    @MainActor
+    private func updateContentHeight(_ height: CGFloat) {
+        let clampedHeight = max(Constants.dashboardMinimumContentHeight, height.rounded(.up))
+        guard abs(contentHeight - clampedHeight) > 0.5 else { return }
+        contentHeight = clampedHeight
     }
 }
 
@@ -33,12 +52,13 @@ struct DashboardView: View {
 /// Injects a SwiftUI title view directly into the AppKit titlebar container
 /// (the superview of the traffic-light buttons) so it is always rendered as
 /// part of the titlebar layer — never behind it.
+@MainActor
 private struct TitlebarConfigurator: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> NSView {
         let view = NSView()
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { @MainActor in
             guard let window = view.window else { return }
             context.coordinator.attach(to: window)
         }
@@ -47,7 +67,8 @@ private struct TitlebarConfigurator: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {}
 
-    final class Coordinator: @unchecked Sendable {
+    @MainActor
+    final class Coordinator {
         private var injectedView: NSView?
 
         func attach(to window: NSWindow) {
