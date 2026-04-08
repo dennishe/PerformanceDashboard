@@ -166,7 +166,7 @@ private extension DashboardLayout {
 
         let eligible = subviews.indices.filter { subviews[$0][WideEligibleKey.self] }
 
-        // Try all combinations of eligible tiles, preferring smallest indices (CPU, GPU, Memory).
+        // Try all combinations of eligible tiles (all tiles are eligible by default).
         if extra <= eligible.count {
             for combo in eligible.combinations(size: extra) {
                 let spans = makeSpans(count: count, wide: Set(combo))

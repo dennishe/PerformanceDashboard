@@ -19,10 +19,8 @@ enum Constants {
     static let updateCoalescingInterval: Duration = .milliseconds(25)
 
     /// Minimum width for the dashboard window content.
-    static let dashboardMinimumWindowWidth: CGFloat = 900
-
-    /// Lower bound for dynamically computed dashboard content height.
-    static let dashboardMinimumContentHeight: CGFloat = 1
+    /// 560 pt allows a 3-column layout even in comfortable mode (3×170 + 2×12 + 2×16 = 574).
+    static let dashboardMinimumWindowWidth: CGFloat = 560
 
     /// Default size for the dashboard window.
     static let dashboardDefaultWindowWidth: CGFloat = 1200

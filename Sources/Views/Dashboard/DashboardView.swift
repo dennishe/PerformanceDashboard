@@ -5,7 +5,7 @@ import AppKit
 struct DashboardView: View {
     let services: ServiceContainer
 
-    @State private var contentHeight = Constants.dashboardMinimumContentHeight
+    @State private var contentHeight: CGFloat = 1
     @State private var detailVM: (any DetailPresenting)?
     @State private var isSettingsVisible = false
 
@@ -29,15 +29,15 @@ struct DashboardView: View {
             onContentHeightChange: updateContentHeight
         ) {
             if settings.isVisible(.cpu) {
-                CPUTileView(viewModel: services.cpu).wideEligible()
+                CPUTileView(viewModel: services.cpu)
                     .tileButton { detailVM = services.cpu }
             }
             if settings.isVisible(.gpu) {
-                GPUTileView(viewModel: services.gpu).wideEligible()
+                GPUTileView(viewModel: services.gpu)
                     .tileButton { detailVM = services.gpu }
             }
             if settings.isVisible(.memory) {
-                MemoryTileView(viewModel: services.memory).wideEligible()
+                MemoryTileView(viewModel: services.memory)
                     .tileButton { detailVM = services.memory }
             }
             if settings.isVisible(.network) {
@@ -86,10 +86,7 @@ struct DashboardView: View {
             settings: settings
         ))
         .background(
-            WindowHeightSizer(
-                contentHeight: contentHeight,
-                minContentHeight: Constants.dashboardMinimumContentHeight
-            )
+            WindowHeightSizer(contentHeight: contentHeight)
         )
     }
 
@@ -117,9 +114,9 @@ struct DashboardView: View {
 
     @MainActor
     private func updateContentHeight(_ height: CGFloat) {
-        let clampedHeight = max(Constants.dashboardMinimumContentHeight, height.rounded(.up))
-        guard abs(contentHeight - clampedHeight) > 0.5 else { return }
-        contentHeight = clampedHeight
+        let rounded = height.rounded(.up)
+        guard rounded > 0, abs(contentHeight - rounded) > 0.5 else { return }
+        contentHeight = rounded
     }
 }
 
