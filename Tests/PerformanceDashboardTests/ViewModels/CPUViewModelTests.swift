@@ -10,7 +10,7 @@ struct CPUViewModelTests {
 
         viewModel.start()
         // Allow the async stream to emit
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usage == 0.75)
     }
@@ -21,7 +21,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usageLabel == "50.0%")
     }
@@ -32,7 +32,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(100))
+        await waitForAsyncUpdates(cycles: 2)
 
         #expect(viewModel.history.count <= Constants.historySamples)
     }
@@ -55,12 +55,12 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
         // Further ticks should not change state after stop.
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.usage == usageBeforeStop)
     }
 }

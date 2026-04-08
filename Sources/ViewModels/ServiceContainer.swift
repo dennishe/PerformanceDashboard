@@ -1,9 +1,9 @@
 import Foundation
 
-/// Owns all metric view models and their underlying services.
+/// Composition root for the dashboard.
 ///
-/// Centralises composition so `PerformanceDashboardApp` is a pure scene-graph
-/// without construction or lifecycle responsibilities.
+/// Creates and wires the full service and view-model graph once at app launch.
+/// This is intentionally a simple eager environment object, not a DI container.
 @MainActor
 @Observable
 final class ServiceContainer {

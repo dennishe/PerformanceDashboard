@@ -9,7 +9,7 @@ struct WirelessViewModelLifecycleTests {
         let btMock   = MockMonitor<BluetoothSnapshot>()
         let viewModel = WirelessViewModel(wifiMonitor: wifiMock, btMonitor: btMock)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001) // (-65+100)/70 = 0.5
     }
@@ -19,10 +19,10 @@ struct WirelessViewModelLifecycleTests {
         let btMock   = MockMonitor<BluetoothSnapshot>(snapshots: [BluetoothSnapshot(connectedCount: 2, on: true)])
         let viewModel = WirelessViewModel(wifiMonitor: wifiMock, btMonitor: btMock)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let wifiStateBeforeStop = viewModel.wifiOn
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.wifiOn == wifiStateBeforeStop)
     }
 }

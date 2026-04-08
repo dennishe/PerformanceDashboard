@@ -1,39 +1,5 @@
 import SwiftUI
 
-// Individual tile views for each metric.
-//
-// Each type alias preserves SwiftUI's per-tile `@Observable` dependency tracking:
-// only the tile whose view model changes re-renders, leaving all others untouched.
-// `MonitorTileView` is the single generic implementation; all concrete tile names
-// are aliases so call-sites in `DashboardView` remain unchanged.
-
-// MARK: - Generic tile wrapper
-
-/// Renders a `MetricTileView` for any view model conforming to `MetricTilePresenting`.
-struct MonitorTileView<VM: MetricTilePresenting>: View {
-    let viewModel: VM
-    var body: some View {
-        MetricTileView(model: viewModel.tileModel)
-    }
-}
-
-// MARK: - Concrete tile type aliases
-
-typealias CPUTileView      = MonitorTileView<CPUViewModel>
-typealias GPUTileView      = MonitorTileView<GPUViewModel>
-typealias MemoryTileView   = MonitorTileView<MemoryViewModel>
-typealias DiskTileView     = MonitorTileView<DiskViewModel>
-typealias PowerTileView    = MonitorTileView<PowerViewModel>
-typealias ThermalTileView  = MonitorTileView<ThermalViewModel>
-typealias FanTileView      = MonitorTileView<FanViewModel>
-typealias BatteryTileView  = MonitorTileView<BatteryViewModel>
-typealias WirelessTileView = MonitorTileView<WirelessViewModel>
-
-#if arch(arm64)
-typealias ANETileView         = MonitorTileView<AcceleratorViewModel>
-typealias MediaEngineTileView = MonitorTileView<MediaEngineViewModel>
-#endif
-
 // MARK: - Network tile (combined ↓ / ↑ in one tile)
 
 /// Single network tile that shows both download and upload throughput.
@@ -46,7 +12,7 @@ struct NetworkTileView: View {
     private var layerColor: LayerColorComponents { .threshold(viewModel.tileModel.thresholdLevel) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: DashboardDesign.Spacing.xSmall) {
             tileHeader
             directionRow(label: "↓", value: viewModel.inLabel, color: .green)
             directionRow(label: "↑", value: viewModel.outLabel, color: .blue)
@@ -70,22 +36,16 @@ struct NetworkTileView: View {
         }
         .frame(height: MetricTileLayoutMetrics.contentHeight, alignment: .top)
         .padding(MetricTileLayoutMetrics.padding)
-        .background {
-            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
-                .fill(Color.tileSurface)
-                .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
-            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
-                .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
-        }
+        .tileCard()
     }
 
     private var tileHeader: some View {
-        HStack(alignment: .center, spacing: 5) {
+        HStack(alignment: .center, spacing: DashboardDesign.Spacing.small) {
             Image(systemName: "network")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .semibold))
                 .foregroundStyle(color)
             Text("NETWORK")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileCaption, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.5)
             Spacer(minLength: 0)
@@ -95,18 +55,24 @@ struct NetworkTileView: View {
                 accessibilityLabel: "Network gauge",
                 accessibilityValue: viewModel.tileModel.value
             )
-            .frame(width: 34, height: 34)
+            .frame(
+                width: MetricTileLayoutMetrics.ringGaugeSize,
+                height: MetricTileLayoutMetrics.ringGaugeSize
+            )
         }
     }
 
     private func directionRow(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: DashboardDesign.Spacing.xSmall) {
             Text(label)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileBody, weight: .semibold))
                 .foregroundStyle(color)
                 .frame(width: 14, alignment: .leading)
             Text(verbatim: value)
-                .font(.system(size: 13, weight: .regular, design: .rounded).monospacedDigit())
+                .font(
+                    .system(size: DashboardDesign.FontSize.tileBody, weight: .regular, design: .rounded)
+                        .monospacedDigit()
+                )
                 .foregroundStyle(.primary)
                 .contentTransition(.numericText())
         }

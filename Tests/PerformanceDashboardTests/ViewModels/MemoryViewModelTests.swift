@@ -9,7 +9,7 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usage == 0.8)
         #expect(viewModel.totalBytes == 16_000_000_000)
@@ -22,7 +22,7 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usageLabel == "50.0%")
     }
@@ -45,11 +45,11 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.usage == usageBeforeStop)
     }
 }

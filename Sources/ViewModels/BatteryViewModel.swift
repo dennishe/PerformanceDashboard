@@ -12,19 +12,15 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
         systemImage: "battery.100"
     )
 
-    @ObservationIgnored
     public private(set) var snapshot = BatterySnapshot(
         isPresent: false, chargeFraction: 0, isCharging: false,
         onAC: true, timeToEmptyMinutes: nil, cycleCount: nil, healthFraction: nil
     )
-    @ObservationIgnored
-    public private(set) var gaugeValue: Double?
-    @ObservationIgnored
-    public private(set) var chargeLabel: String = "AC Power"
-    @ObservationIgnored
-    public private(set) var statusLabel: String?
-    @ObservationIgnored
-    public private(set) var cycleLabel: String?
+
+    public var gaugeValue: Double? { snapshot.isPresent ? snapshot.chargeFraction : nil }
+    public var chargeLabel: String { Self.makeChargeLabel(from: snapshot) }
+    public var statusLabel: String? { Self.makeStatusLabel(from: snapshot) }
+    public var cycleLabel: String? { snapshot.cycleCount.map { "\($0) cycles" } }
 
     public var thresholdLevel: ThresholdLevel {
         guard snapshot.isPresent else { return .inactive }
@@ -33,21 +29,17 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
 
     override public func receive(_ newSnapshot: BatterySnapshot) {
         snapshot = newSnapshot
-        gaugeValue = newSnapshot.isPresent ? newSnapshot.chargeFraction : nil
-        chargeLabel = Self.makeChargeLabel(from: newSnapshot)
-        statusLabel = Self.makeStatusLabel(from: newSnapshot)
-        cycleLabel = newSnapshot.cycleCount.map { "\($0) cycles" }
         appendHistory(newSnapshot.chargeFraction)
-        let newTileModel = Self.makeTileModel(
-            snapshot: snapshot,
-            chargeLabel: chargeLabel,
-            gaugeValue: gaugeValue,
-            history: history,
-            statusLabel: statusLabel
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                snapshot: snapshot,
+                chargeLabel: chargeLabel,
+                gaugeValue: gaugeValue,
+                history: history,
+                statusLabel: statusLabel
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -74,7 +66,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
 
     private static func makeChargeLabel(from snapshot: BatterySnapshot) -> String {
         guard snapshot.isPresent else { return "AC Power" }
-        return String(format: "%.1f%%", snapshot.chargeFraction * 100)
+        return snapshot.chargeFraction.percentFormatted()
     }
 
     private static func makeStatusLabel(from snapshot: BatterySnapshot) -> String? {
@@ -97,7 +89,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
                 stats.append(.init(label: "Cycle count", value: "\(cycles)"))
             }
             if let health = snapshot.healthFraction {
-                stats.append(.init(label: "Health", value: String(format: "%.1f%%", health * 100)))
+                stats.append(.init(label: "Health", value: health.percentFormatted()))
             }
             if let status = statusLabel {
                 stats.append(.init(label: "Status", value: status))

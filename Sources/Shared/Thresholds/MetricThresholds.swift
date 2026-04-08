@@ -1,15 +1,56 @@
 import Foundation
 
+public struct LinearThreshold: ThresholdEvaluating {
+    private let normalUpperBound: Double
+    private let warningUpperBound: Double
+
+    public init(normalUpperBound: Double, warningUpperBound: Double) {
+        self.normalUpperBound = normalUpperBound
+        self.warningUpperBound = warningUpperBound
+    }
+
+    public func level(for value: Double) -> ThresholdLevel {
+        switch value {
+        case ..<normalUpperBound: return .normal
+        case ..<warningUpperBound: return .warning
+        default: return .critical
+        }
+    }
+}
+
+public struct InverseThreshold: ThresholdEvaluating {
+    private let normalLowerBound: Double
+    private let warningLowerBound: Double
+
+    public init(normalLowerBound: Double, warningLowerBound: Double) {
+        self.normalLowerBound = normalLowerBound
+        self.warningLowerBound = warningLowerBound
+    }
+
+    public func level(for value: Double) -> ThresholdLevel {
+        switch value {
+        case normalLowerBound...: return .normal
+        case warningLowerBound...: return .warning
+        default: return .critical
+        }
+    }
+}
+
+private func linearThresholdLevel(
+    _ value: Double,
+    normalUpperBound: Double,
+    warningUpperBound: Double
+) -> ThresholdLevel {
+    LinearThreshold(normalUpperBound: normalUpperBound, warningUpperBound: warningUpperBound)
+        .level(for: value)
+}
+
 // MARK: - CPU
 
 /// Threshold configuration for CPU utilisation.
 public struct CPUThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.6:  return .normal
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 
@@ -18,11 +59,7 @@ public struct CPUThreshold: ThresholdEvaluating {
 /// Threshold configuration for GPU utilisation.
 public struct GPUThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.6:  return .normal
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 
@@ -31,11 +68,7 @@ public struct GPUThreshold: ThresholdEvaluating {
 /// Threshold configuration for memory pressure.
 public struct MemoryThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.7:  return .normal
-        case ..<0.9:  return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.9)
     }
 }
 
@@ -58,11 +91,7 @@ public struct NetworkThreshold: ThresholdEvaluating {
 /// Threshold configuration for disk usage.
 public struct DiskThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.75: return .normal
-        case ..<0.9:  return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.75, warningUpperBound: 0.9)
     }
 }
 
@@ -71,11 +100,7 @@ public struct DiskThreshold: ThresholdEvaluating {
 /// Threshold configuration for ANE utilisation.
 public struct AcceleratorThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.6:  return .normal
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 
@@ -84,11 +109,7 @@ public struct AcceleratorThreshold: ThresholdEvaluating {
 /// Threshold levels for power draw (normalised via adaptive maximum).
 public struct PowerThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.6:  return .normal
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 
@@ -97,11 +118,7 @@ public struct PowerThreshold: ThresholdEvaluating {
 /// Threshold levels for fan speed usage.
 public struct FanThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.7:  return .normal
-        case ..<0.9:  return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.9)
     }
 }
 
@@ -110,11 +127,7 @@ public struct FanThreshold: ThresholdEvaluating {
 /// Threshold levels for CPU temperature.
 public struct ThermalThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.7:  return .normal   // < ~70 °C normalised to 100 °C max
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.85)
     }
 }
 
@@ -123,11 +136,7 @@ public struct ThermalThreshold: ThresholdEvaluating {
 /// Threshold levels for battery charge (inverted — low charge is critical).
 public struct BatteryThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case 0.2...: return .normal
-        case 0.1...: return .warning
-        default:     return .critical
-        }
+        InverseThreshold(normalLowerBound: 0.2, warningLowerBound: 0.1).level(for: value)
     }
 }
 
@@ -136,11 +145,7 @@ public struct BatteryThreshold: ThresholdEvaluating {
 /// Threshold levels for Media Engine combined load.
 public struct MediaEngineThreshold: ThresholdEvaluating {
     public func level(for value: Double) -> ThresholdLevel {
-        switch value {
-        case ..<0.6:  return .normal
-        case ..<0.85: return .warning
-        default:      return .critical
-        }
+        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 

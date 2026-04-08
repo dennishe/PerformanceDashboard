@@ -9,7 +9,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 15.5)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.watts == 15.5)
     }
 
@@ -32,7 +32,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 10.0)]  // 10 / 20 = 0.5
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -44,7 +44,7 @@ struct PowerViewModelTests {
         ]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 1.0)
         #expect(viewModel.watts == 50.0)
     }
@@ -54,7 +54,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 12.3)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.wattsLabel == "12.3 W")
     }
 
@@ -63,7 +63,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: nil)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.wattsLabel == "—")
     }
 
@@ -72,7 +72,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 5.0)]  // 5/20 = 0.25 < 0.6
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -81,7 +81,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 19.0)]  // 19/20 = 0.95 > 0.85
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
 
@@ -90,7 +90,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 10.0)]  // 10/20 = 0.5
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
@@ -100,7 +100,7 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: nil)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(viewModel.history.last == 0)
     }
@@ -110,10 +110,10 @@ struct PowerViewModelTests {
         monitor.snapshots = [PowerSnapshot(watts: 12.5)]
         let viewModel = PowerViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let wattsBeforeStop = viewModel.watts
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.watts == wattsBeforeStop)
     }
 }

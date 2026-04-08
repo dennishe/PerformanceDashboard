@@ -3,12 +3,11 @@ import SwiftUI
 /// Overlay card that shows a richer view of a single metric: time-series chart with
 /// selectable range and per-metric secondary stats. Presented in-page (not a sheet).
 struct MetricDetailView: View {
-    let viewModel: any DetailPresenting
+    let model: DetailModel
     let onDismiss: () -> Void
     @State private var selectedRange: TimeRange = .oneMinute
 
     var body: some View {
-        let model = viewModel.detailModel
         VStack(alignment: .leading, spacing: 0) {
             headerRow(model: model)
             chartSection(model: model)
@@ -17,19 +16,19 @@ struct MetricDetailView: View {
             }
         }
         .background(Color.tileSurface, in: RoundedRectangle(cornerRadius: 18))
-        .shadow(color: .black.opacity(0.45), radius: 40, y: 12)
+        .shadow(color: .black.opacity(DashboardDesign.Opacity.modalScrim), radius: 40, y: 12)
         .overlay(alignment: .topTrailing) {
             Button { onDismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .medium))
                     .foregroundStyle(.tertiary)
                     .padding(5)
                     .background(.quaternary, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
-            .padding(.top, 10)
-            .padding(.trailing, 12)
+            .padding(.top, DashboardDesign.Spacing.compact)
+            .padding(.trailing, DashboardDesign.Spacing.regular)
         }
     }
 
@@ -38,12 +37,15 @@ struct MetricDetailView: View {
     private func headerRow(model: DetailModel) -> some View {
         HStack(spacing: 6) {
             Image(systemName: model.systemImage)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileControl, weight: .semibold))
                 .foregroundStyle(.secondary)
             Text(verbatim: model.title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileHeader, weight: .semibold))
             Text(verbatim: model.primaryValue)
-                .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
+                .font(
+                    .system(size: DashboardDesign.FontSize.tileHeader, weight: .semibold, design: .rounded)
+                        .monospacedDigit()
+                )
                 .foregroundStyle(Color.threshold(model.thresholdLevel))
                 .contentTransition(.numericText())
                 .padding(.leading, 2)
@@ -59,9 +61,9 @@ struct MetricDetailView: View {
             .accessibilityLabel("Time range")
         }
         // Right padding leaves space for the floating close button overlay.
-        .padding(.leading, 16)
+        .padding(.leading, DashboardDesign.Spacing.large)
         .padding(.trailing, 52)
-        .padding(.vertical, 10)
+        .padding(.vertical, DashboardDesign.Spacing.compact)
         .overlay(alignment: .bottom) { Divider().opacity(0.4) }
     }
 
@@ -77,9 +79,9 @@ struct MetricDetailView: View {
             accessibilityValue: model.primaryValue
         )
         .frame(height: 160)
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
+        .padding(.horizontal, DashboardDesign.Spacing.large)
+        .padding(.top, DashboardDesign.Spacing.medium)
+        .padding(.bottom, DashboardDesign.Spacing.regular)
     }
 
     // MARK: - Stats
@@ -96,18 +98,18 @@ struct MetricDetailView: View {
                         .monospacedDigit()
                         .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, DashboardDesign.Spacing.large)
                 .padding(.vertical, 9)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("\(stat.label): \(stat.value)")
                 if stat.id != stats.last?.id {
                     Divider()
                         .opacity(0.3)
-                        .padding(.leading, 16)
+                        .padding(.leading, DashboardDesign.Spacing.large)
                 }
             }
         }
-        .font(.system(size: 13))
+        .font(.system(size: DashboardDesign.FontSize.tileBody))
     }
 }
 
@@ -134,21 +136,19 @@ private enum TimeRange: CaseIterable {
 }
 
 #Preview {
-    final class MockDetail: DetailPresenting {
-        var detailModel: DetailModel {
-            DetailModel(
-                title: "CPU",
-                systemImage: "cpu",
-                primaryValue: "42.3%",
-                thresholdLevel: .normal,
-                history: (0..<60).map { _ in Double.random(in: 0...0.5) },
-                stats: [
-                    .init(label: "Usage", value: "42.3%")
-                ]
-            )
-        }
-    }
-    return MetricDetailView(viewModel: MockDetail(), onDismiss: {})
+    return MetricDetailView(
+        model: DetailModel(
+            title: "CPU",
+            systemImage: "cpu",
+            primaryValue: "42.3%",
+            thresholdLevel: .normal,
+            history: (0..<60).map { _ in Double.random(in: 0...0.5) },
+            stats: [
+                .init(label: "Usage", value: "42.3%")
+            ]
+        ),
+        onDismiss: {}
+    )
         .frame(width: 480)
         .padding()
 }

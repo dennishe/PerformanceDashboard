@@ -36,16 +36,16 @@ struct MenuBarMetricsView: View {
     private var header: some View {
         HStack(spacing: 6) {
             Image(systemName: "gauge")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .medium))
                 .foregroundStyle(.tertiary)
             Text("Performance")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileControl, weight: .semibold))
                 .foregroundStyle(.secondary)
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
+        .padding(.horizontal, DashboardDesign.Spacing.medium)
+        .padding(.top, DashboardDesign.Spacing.regular)
+        .padding(.bottom, DashboardDesign.Spacing.xSmall)
     }
 
     // MARK: - Metric groups
@@ -82,9 +82,9 @@ struct MenuBarMetricsView: View {
     }
 
     private var groupSeparator: some View {
-        Color.primary.opacity(0.06)
+        Color.primary.opacity(DashboardDesign.Opacity.popoverDivider)
             .frame(height: 1)
-            .padding(.horizontal, 14)
+            .padding(.horizontal, DashboardDesign.Spacing.medium)
             .padding(.vertical, 2)
     }
 
@@ -101,7 +101,7 @@ struct MenuBarMetricsView: View {
             Button("Quit") { quit() }
                 .buttonStyle(PopoverButtonStyle(isDestructive: true))
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, DashboardDesign.Spacing.compact)
         .padding(.vertical, 7)
     }
 }
@@ -118,29 +118,29 @@ private struct MetricRow: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: DashboardDesign.Spacing.compact) {
             ZStack {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(tint.opacity(0.15))
                     .frame(width: 24, height: 24)
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: DashboardDesign.FontSize.tileControl, weight: .medium))
                     .foregroundStyle(tint)
             }
             Text(label)
-                .font(.system(size: 13))
+                .font(.system(size: DashboardDesign.FontSize.tileBody))
                 .foregroundStyle(.primary)
             Spacer()
             Text(verbatim: value)
-                .font(.system(size: 13).monospacedDigit())
+                .font(.system(size: DashboardDesign.FontSize.tileBody).monospacedDigit())
                 .fontWeight(.semibold)
                 .foregroundStyle(valueColor)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, DashboardDesign.Spacing.compact)
+        .padding(.vertical, DashboardDesign.Spacing.small)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.primary.opacity(isHovered ? 0.07 : 0))
+                .fill(Color.primary.opacity(isHovered ? DashboardDesign.Opacity.tileChrome : 0))
                 .padding(.horizontal, 4)
         )
         .animation(.easeOut(duration: 0.1), value: isHovered)
@@ -178,7 +178,7 @@ private struct PopoverButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: DashboardDesign.FontSize.tileControl, weight: .medium))
                 .foregroundStyle(tint)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)

@@ -9,7 +9,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.fans.count == 1)
         #expect(viewModel.fans[0].current == 1200)
     }
@@ -26,7 +26,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -38,7 +38,7 @@ struct FanViewModelTests {
         ])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.8)
     }
 
@@ -47,7 +47,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.primaryLabel == "No fans")
     }
 
@@ -59,7 +59,7 @@ struct FanViewModelTests {
         ])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.primaryLabel == "2400 RPM")
     }
 
@@ -75,7 +75,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.subtitle == "F0: 1200 / 6000")
     }
 
@@ -87,7 +87,7 @@ struct FanViewModelTests {
         ])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.subtitle == "F0: 1200 / 6000 · F1: 2400 / 6000")
     }
 
@@ -96,7 +96,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .inactive)
     }
 
@@ -105,7 +105,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5 < 0.7
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -114,7 +114,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 5700, max: 6000)])]  // 0.95 > 0.9
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
 
@@ -123,7 +123,7 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
@@ -133,10 +133,10 @@ struct FanViewModelTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let countBeforeStop = viewModel.fans.count
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.fans.count == countBeforeStop)
     }
 }

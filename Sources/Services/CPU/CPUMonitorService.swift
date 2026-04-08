@@ -5,7 +5,7 @@ public struct ProcessCPUStat: Sendable {
     public let name: String
     /// Fraction of one core [0, 1].
     public let fraction: Double
-    public var percentLabel: String { String(format: "%.1f%%", fraction * 100) }
+    public var percentLabel: String { fraction.percentFormatted() }
 }
 
 /// Snapshot of overall CPU utilisation at a point in time.

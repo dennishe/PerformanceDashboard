@@ -1,12 +1,18 @@
 import Foundation
 
+enum UpdateLane: String {
+    case `default`
+    case wifi
+    case bluetooth
+}
+
 @MainActor
 final class DashboardUpdateBatcher {
     static let shared = DashboardUpdateBatcher()
 
     private struct UpdateKey: Hashable {
         let ownerID: ObjectIdentifier
-        let lane: String
+        let lane: UpdateLane
     }
 
     private var pendingUpdates: [UpdateKey: [() -> Void]] = [:]
@@ -14,7 +20,7 @@ final class DashboardUpdateBatcher {
 
     private init() {}
 
-    func enqueue(owner: AnyObject, lane: String = "default", update: @escaping () -> Void) {
+    func enqueue(owner: AnyObject, lane: UpdateLane = .default, update: @escaping () -> Void) {
         let key = UpdateKey(ownerID: ObjectIdentifier(owner), lane: lane)
         pendingUpdates[key, default: []].append(update)
 

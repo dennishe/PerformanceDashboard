@@ -4,32 +4,28 @@ import SwiftUI
 @MainActor
 @Observable
 public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
+    private var lastSnapshot = GPUSnapshot(usage: nil)
+
     public private(set) var tileModel = MetricTileModel(
         title: "GPU",
-        value: GPUViewModel.makeUsageLabel(for: nil),
+        value: "N/A",
         gaugeValue: nil,
         history: Constants.prefilledHistory,
         thresholdLevel: .normal,
         systemImage: "display"
     )
 
-    @ObservationIgnored
-    public private(set) var usage: Double?
-    @ObservationIgnored
-    public private(set) var usageLabel: String = GPUViewModel.makeUsageLabel(for: nil)
+    public var usage: Double? { lastSnapshot.usage }
+    public var usageLabel: String { usage.map { $0.percentFormatted() } ?? "N/A" }
 
     public var thresholdLevel: ThresholdLevel { GPUThreshold().level(for: usage ?? 0) }
 
     override public func receive(_ snapshot: GPUSnapshot) {
-        usage = snapshot.usage
-        usageLabel = Self.makeUsageLabel(for: snapshot.usage)
+        lastSnapshot = snapshot
         if let value = snapshot.usage {
             appendHistory(value)
         }
-        let newTileModel = Self.makeTileModel(usage: usage, usageLabel: usageLabel, history: history)
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
+        assignIfChanged(&tileModel, to: Self.makeTileModel(usage: usage, usageLabel: usageLabel, history: history))
     }
 
     private static func makeTileModel(usage: Double?, usageLabel: String, history: [Double]) -> MetricTileModel {
@@ -42,11 +38,6 @@ public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
             unavailableReason: usage == nil ? "GPU stats unavailable" : nil,
             systemImage: "display"
         )
-    }
-
-    private static func makeUsageLabel(for usage: Double?) -> String {
-        guard let usage else { return "N/A" }
-        return String(format: "%.1f%%", usage * 100)
     }
 
     public var detailModel: DetailModel {

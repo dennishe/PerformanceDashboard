@@ -8,12 +8,12 @@ struct SettingsPanelView: View {
                                GridItem(.flexible(), alignment: .leading)]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: DashboardDesign.Spacing.medium) {
             densitySection
             Divider()
             visibilitySection
         }
-        .padding(14)
+        .padding(DashboardDesign.Spacing.medium)
         .frame(width: 270)
     }
 
@@ -47,7 +47,7 @@ struct SettingsPanelView: View {
                             .lineLimit(1)
                     }
                     .toggleStyle(.checkbox)
-                    .font(.system(size: 12))
+                    .font(.system(size: DashboardDesign.FontSize.tileControl))
                 }
             }
         }
@@ -55,7 +55,7 @@ struct SettingsPanelView: View {
 
     private func sectionHeader(_ label: String) -> some View {
         Text(label)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: DashboardDesign.FontSize.tileCaption, weight: .semibold))
             .foregroundStyle(.secondary)
             .tracking(0.6)
             .textCase(.uppercase)

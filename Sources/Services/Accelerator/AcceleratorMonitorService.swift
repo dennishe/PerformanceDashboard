@@ -12,7 +12,7 @@ public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnap
     #if arch(arm64)
     /// Injected sampler; defaults to `PMPSampler.shared` at first use inside poll().
     /// Setting this before `stream()` injects a mock for testing.
-    @MonitorActor var sampler: any PMPSamplerProtocol = PMPSampler.shared
+    @MonitorActor var sampler: PMPSampler = .shared
     #endif
 
     @MonitorActor
@@ -47,9 +47,9 @@ private struct ANEState {
     private static let initialMaxDelta: Double = 1
 
     private var maxDelta: Double = ANEState.initialMaxDelta
-    private let sampler: any PMPSamplerProtocol
+    private let sampler: PMPSampler
 
-    init(sampler: some PMPSamplerProtocol) {
+    init(sampler: PMPSampler) {
         self.sampler = sampler
     }
 

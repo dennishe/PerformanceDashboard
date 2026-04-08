@@ -9,7 +9,7 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usage == 0.6)
     }
@@ -20,7 +20,7 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(!viewModel.availableLabel.isEmpty)
     }
@@ -43,11 +43,11 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.usage == usageBeforeStop)
     }
 }

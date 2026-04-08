@@ -12,7 +12,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.snapshot.chargeFraction == 0.78)
     }
 
@@ -24,7 +24,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.6)
     }
 
@@ -36,7 +36,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == nil)
     }
 
@@ -48,7 +48,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.chargeLabel == "78.0%")
     }
 
@@ -60,7 +60,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.chargeLabel == "AC Power")
     }
 
@@ -72,7 +72,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == nil)
     }
 
@@ -84,7 +84,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == "Charging")
     }
 
@@ -96,7 +96,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == "Charged")
     }
 
@@ -108,7 +108,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == "1h 30m left")
     }
 
@@ -120,7 +120,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == "45m left")
     }
 
@@ -132,7 +132,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.statusLabel == "On battery")
     }
 
@@ -144,7 +144,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.cycleLabel == "128 cycles")
     }
 
@@ -156,7 +156,7 @@ struct BatteryViewModelTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.cycleLabel == nil)
     }
 }

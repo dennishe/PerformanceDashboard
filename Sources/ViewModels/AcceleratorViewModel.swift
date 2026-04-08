@@ -4,32 +4,31 @@ import SwiftUI
 @MainActor
 @Observable
 public final class AcceleratorViewModel: MonitorViewModelBase<AcceleratorSnapshot> {
+    private var lastSnapshot = AcceleratorSnapshot(aneUsage: nil)
+
     public private(set) var tileModel = MetricTileModel(
         title: "ANE",
-        value: AcceleratorViewModel.makeUsageLabel(for: nil),
+        value: "N/A",
         gaugeValue: nil,
         history: Constants.prefilledHistory,
         thresholdLevel: .normal,
         systemImage: "brain"
     )
 
-    @ObservationIgnored
-    public private(set) var aneUsage: Double?
-    @ObservationIgnored
-    public private(set) var usageLabel: String = AcceleratorViewModel.makeUsageLabel(for: nil)
+    public var aneUsage: Double? { lastSnapshot.aneUsage }
+    public var usageLabel: String { aneUsage.map { $0.percentFormatted() } ?? "N/A" }
 
     public var thresholdLevel: ThresholdLevel { AcceleratorThreshold().level(for: aneUsage ?? 0) }
 
     override public func receive(_ snapshot: AcceleratorSnapshot) {
-        aneUsage = snapshot.aneUsage
-        usageLabel = Self.makeUsageLabel(for: snapshot.aneUsage)
+        lastSnapshot = snapshot
         if let value = snapshot.aneUsage {
             appendHistory(value)
         }
-        let newTileModel = Self.makeTileModel(aneUsage: aneUsage, usageLabel: usageLabel, history: history)
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(aneUsage: aneUsage, usageLabel: usageLabel, history: history)
+        )
     }
 
     private static func makeTileModel(
@@ -45,11 +44,6 @@ public final class AcceleratorViewModel: MonitorViewModelBase<AcceleratorSnapsho
             thresholdLevel: AcceleratorThreshold().level(for: aneUsage ?? 0),
             systemImage: "brain"
         )
-    }
-
-    private static func makeUsageLabel(for usage: Double?) -> String {
-        guard let usage else { return "N/A" }
-        return String(format: "%.1f%%", usage * 100)
     }
 
     public var detailModel: DetailModel {

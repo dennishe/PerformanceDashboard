@@ -9,7 +9,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.inLabel.contains("/s"))
         #expect(viewModel.outLabel.contains("/s"))
@@ -24,7 +24,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(100))
+        await waitForAsyncUpdates(cycles: 2)
 
         #expect(viewModel.historyIn.count == Constants.historySamples)
         #expect(viewModel.historyOut.count == Constants.historySamples)
@@ -50,7 +50,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.inGauge == 1.0)
         #expect(viewModel.outGauge == 1.0)
@@ -62,7 +62,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.inGauge == 0.5)
         #expect(viewModel.outGauge == 0.25)
@@ -74,11 +74,11 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let inBeforeStop = viewModel.bytesInPerSecond
         viewModel.stop()
 
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.bytesInPerSecond == inBeforeStop)
     }
 

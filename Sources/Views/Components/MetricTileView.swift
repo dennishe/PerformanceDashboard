@@ -12,7 +12,7 @@ struct MetricTileView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: DashboardDesign.Spacing.xSmall) {
             tileHeader
             valueText
             subtitleText
@@ -27,24 +27,18 @@ struct MetricTileView: View {
         }
         .frame(height: MetricTileLayoutMetrics.contentHeight, alignment: .top)
         .padding(MetricTileLayoutMetrics.padding)
-        .background {
-            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
-                .fill(Color.tileSurface)
-                .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
-            RoundedRectangle(cornerRadius: MetricTileLayoutMetrics.cornerRadius)
-                .strokeBorder(Color.primary.opacity(0.07), lineWidth: 1)
-        }
+        .tileCard()
     }
 
     // MARK: - Sub-views
 
     private var tileHeader: some View {
-        HStack(alignment: .center, spacing: 5) {
+        HStack(alignment: .center, spacing: DashboardDesign.Spacing.small) {
             Image(systemName: model.systemImage)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .semibold))
                 .foregroundStyle(gaugeColor)
             Text(verbatim: model.displayTitle)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: DashboardDesign.FontSize.tileCaption, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.5)
             Spacer(minLength: 0)
@@ -54,13 +48,16 @@ struct MetricTileView: View {
                 accessibilityLabel: model.gaugeAccessibilityLabel,
                 accessibilityValue: model.value
             )
-                .frame(width: 34, height: 34)
+                .frame(
+                    width: MetricTileLayoutMetrics.ringGaugeSize,
+                    height: MetricTileLayoutMetrics.ringGaugeSize
+                )
         }
     }
 
     private var valueText: some View {
         Text(verbatim: model.value)
-            .font(.system(size: 26, weight: .semibold, design: .rounded))
+            .font(.system(size: DashboardDesign.FontSize.tileValue, weight: .semibold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(gaugeColor)
             .contentTransition(.numericText())
@@ -71,12 +68,12 @@ struct MetricTileView: View {
     @ViewBuilder private var subtitleText: some View {
         if let reason = model.unavailableReason, model.gaugeValue == nil {
             Label(reason, systemImage: "exclamationmark.circle")
-                .font(.system(size: 10))
+                .font(.system(size: DashboardDesign.FontSize.tileCaption))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
         } else if let subtitle = model.subtitle {
             Text(verbatim: subtitle)
-                .font(.system(size: 11))
+                .font(.system(size: DashboardDesign.FontSize.tileSubtitle))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
         }

@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 @Observable
 public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
+    private var lastSnapshot = ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)
+
     public private(set) var tileModel = MetricTileModel(
         title: "Temp",
         value: "—",
@@ -13,19 +15,18 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
         systemImage: "thermometer.medium"
     )
 
-    @ObservationIgnored
-    public private(set) var cpuCelsius: Double?
-    @ObservationIgnored
-    public private(set) var gpuCelsius: Double?
-    @ObservationIgnored
-    public private(set) var gaugeValue: Double?
-    @ObservationIgnored
-    public private(set) var cpuLabel: String = "—"
-    @ObservationIgnored
-    public private(set) var gpuLabel: String?
+    public var cpuCelsius: Double? { lastSnapshot.cpuCelsius }
+    public var gpuCelsius: Double? { lastSnapshot.gpuCelsius }
+    public var gaugeValue: Double? { cpuCelsius.map(Self.normalizedCelsius) }
+    public var cpuLabel: String { cpuCelsius.map { $0.celsiusFormatted() } ?? "—" }
+    public var gpuLabel: String? { gpuCelsius.map { "GPU \($0.celsiusFormatted())" } }
 
     /// Normalised CPU temperature using 100 °C as the reference maximum.
     private static let maxCelsius = 100.0
+
+    private static func normalizedCelsius(_ value: Double) -> Double {
+        min(1.0, max(0.0, value / maxCelsius))
+    }
 
     public var thresholdLevel: ThresholdLevel {
         guard let gaugeValue else { return .inactive }
@@ -33,26 +34,17 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
     }
 
     override public func receive(_ snapshot: ThermalSnapshot) {
-        cpuCelsius = snapshot.cpuCelsius
-        gpuCelsius = snapshot.gpuCelsius
-        let normalized = snapshot.cpuCelsius.map {
-            min(1.0, max(0.0, $0 / ThermalViewModel.maxCelsius))
-        } ?? 0
-        gaugeValue = snapshot.cpuCelsius.map {
-            min(1.0, max(0.0, $0 / ThermalViewModel.maxCelsius))
-        }
-        cpuLabel = snapshot.cpuCelsius.map { String(format: "%.1f°C", $0) } ?? "—"
-        gpuLabel = snapshot.gpuCelsius.map { String(format: "GPU %.1f°C", $0) }
-        appendHistory(normalized)
-        let newTileModel = Self.makeTileModel(
-            cpuLabel: cpuLabel,
-            gaugeValue: gaugeValue,
-            history: history,
-            gpuLabel: gpuLabel
+        lastSnapshot = snapshot
+        appendHistory(snapshot.cpuCelsius.map(Self.normalizedCelsius) ?? 0)
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                cpuLabel: cpuLabel,
+                gaugeValue: gaugeValue,
+                history: history,
+                gpuLabel: gpuLabel
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -76,8 +68,8 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
 
     public var detailModel: DetailModel {
         var stats: [DetailModel.Stat] = []
-        if let cpu = cpuCelsius { stats.append(.init(label: "CPU", value: String(format: "%.1f°C", cpu))) }
-        if let gpu = gpuCelsius { stats.append(.init(label: "GPU", value: String(format: "%.1f°C", gpu))) }
+        if let cpu = cpuCelsius { stats.append(.init(label: "CPU", value: cpu.celsiusFormatted())) }
+        if let gpu = gpuCelsius { stats.append(.init(label: "GPU", value: gpu.celsiusFormatted())) }
         return DetailModel(
             title: "Temperature",
             systemImage: "thermometer.medium",

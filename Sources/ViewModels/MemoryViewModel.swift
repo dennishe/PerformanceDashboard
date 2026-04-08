@@ -4,56 +4,41 @@ import SwiftUI
 @MainActor
 @Observable
 public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
-    private static let byteFormatter: ByteCountFormatter = {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .memory
-        return formatter
-    }()
+    private var lastSnapshot = MemorySnapshot(usage: 0, total: 0, used: 0)
 
     public private(set) var tileModel = MetricTileModel(
         title: "Memory",
-        value: MemoryViewModel.makeUsageLabel(for: 0),
+        value: 0.percentFormatted(),
         gaugeValue: 0,
         history: Constants.prefilledHistory,
         thresholdLevel: .normal,
-        subtitle: MemoryViewModel.byteFormatter.string(fromByteCount: 0) + " / " +
-            MemoryViewModel.byteFormatter.string(fromByteCount: 0),
+        subtitle: AppFormatters.byteCountString(0, style: .memory) + " / " +
+            AppFormatters.byteCountString(0, style: .memory),
         systemImage: "memorychip"
     )
 
-    @ObservationIgnored
-    public private(set) var usage: Double = 0
-    @ObservationIgnored
-    public private(set) var usedBytes: UInt64 = 0
-    @ObservationIgnored
-    public private(set) var totalBytes: UInt64 = 0
-    @ObservationIgnored
-    public private(set) var usageLabel: String = MemoryViewModel.makeUsageLabel(for: 0)
-    @ObservationIgnored
-    public private(set) var usedLabel: String = MemoryViewModel.byteFormatter.string(fromByteCount: 0)
-    @ObservationIgnored
-    public private(set) var totalLabel: String = MemoryViewModel.byteFormatter.string(fromByteCount: 0)
+    public var usage: Double { lastSnapshot.usage }
+    public var usedBytes: UInt64 { lastSnapshot.used }
+    public var totalBytes: UInt64 { lastSnapshot.total }
+    public var usageLabel: String { usage.percentFormatted() }
+    public var usedLabel: String { AppFormatters.byteCountString(Int64(usedBytes), style: .memory) }
+    public var totalLabel: String { AppFormatters.byteCountString(Int64(totalBytes), style: .memory) }
 
     public var thresholdLevel: ThresholdLevel { MemoryThreshold().level(for: usage) }
 
     override public func receive(_ snapshot: MemorySnapshot) {
-        usage      = snapshot.usage
-        usedBytes  = snapshot.used
-        totalBytes = snapshot.total
-        usageLabel = Self.makeUsageLabel(for: snapshot.usage)
-        usedLabel = Self.byteFormatter.string(fromByteCount: Int64(snapshot.used))
-        totalLabel = Self.byteFormatter.string(fromByteCount: Int64(snapshot.total))
+        lastSnapshot = snapshot
         appendHistory(snapshot.usage)
-        let newTileModel = Self.makeTileModel(
-            usage: usage,
-            usageLabel: usageLabel,
-            usedLabel: usedLabel,
-            totalLabel: totalLabel,
-            history: history
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                usage: usage,
+                usageLabel: usageLabel,
+                usedLabel: usedLabel,
+                totalLabel: totalLabel,
+                history: history
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -74,10 +59,6 @@ public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
         )
     }
 
-    private static func makeUsageLabel(for usage: Double) -> String {
-        String(format: "%.1f%%", usage * 100)
-    }
-
     public var detailModel: DetailModel {
         DetailModel(
             title: "Memory",
@@ -88,8 +69,10 @@ public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
             stats: [
                 .init(label: "Used", value: usedLabel),
                 .init(label: "Total", value: totalLabel),
-                .init(label: "Free", value: Self.byteFormatter.string(fromByteCount:
-                    Int64(totalBytes) - Int64(usedBytes)))
+                .init(
+                    label: "Free",
+                    value: AppFormatters.byteCountString(Int64(totalBytes) - Int64(usedBytes), style: .memory)
+                )
             ]
         )
     }

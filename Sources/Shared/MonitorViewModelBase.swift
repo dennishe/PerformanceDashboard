@@ -10,11 +10,9 @@ import SwiftUI
 @MainActor
 @Observable
 open class MonitorViewModelBase<Snapshot: Sendable> {
-    @ObservationIgnored
     public private(set) var history: [Double] = Constants.prefilledHistory
 
     /// Up to 900 samples for the 15-minute detail chart.
-    @ObservationIgnored
     public private(set) var extendedHistory: [Double] = []
 
     private var monitorTask: Task<Void, Never>?
@@ -48,17 +46,11 @@ open class MonitorViewModelBase<Snapshot: Sendable> {
 
     /// Appends `value` to both the sparkline history and the extended detail history.
     func appendHistory(_ value: Double) {
-        history = Self.appendRingBuffer(history, value: value, maxCount: Constants.historySamples)
-        extendedHistory = Self.appendRingBuffer(extendedHistory, value: value,
-                                                maxCount: Constants.extendedHistorySamples)
-    }
-
-    private static func appendRingBuffer(_ buffer: [Double], value: Double, maxCount: Int) -> [Double] {
-        var updated = buffer
-        updated.append(value)
-        if updated.count > maxCount {
-            updated.removeFirst(updated.count - maxCount)
-        }
-        return updated
+        history = ringBufferAppending(history, value: value, maxCount: Constants.historySamples)
+        extendedHistory = ringBufferAppending(
+            extendedHistory,
+            value: value,
+            maxCount: Constants.extendedHistorySamples
+        )
     }
 }

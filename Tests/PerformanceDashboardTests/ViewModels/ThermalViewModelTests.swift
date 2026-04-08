@@ -9,7 +9,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 65.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.cpuCelsius == 65.0)
     }
 
@@ -18,7 +18,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: 40.0)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gpuCelsius == 40.0)
     }
 
@@ -27,7 +27,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -36,7 +36,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 150.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 1.0)
     }
 
@@ -45,7 +45,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == nil)
     }
 
@@ -54,7 +54,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 72.3, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.cpuLabel == "72.3°C")
     }
 
@@ -70,7 +70,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gpuLabel == nil)
     }
 
@@ -79,7 +79,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: 45.5)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gpuLabel == "GPU 45.5°C")
     }
 
@@ -95,7 +95,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -104,7 +104,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 78.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .warning)
     }
 
@@ -113,7 +113,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 90.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
 
@@ -122,7 +122,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 50.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
@@ -132,7 +132,7 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(viewModel.history.last == 0)
     }
@@ -142,10 +142,10 @@ struct ThermalViewModelTests {
         monitor.snapshots = [ThermalSnapshot(cpuCelsius: 60.0, gpuCelsius: nil)]
         let viewModel = ThermalViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let cpuBeforeStop = viewModel.cpuCelsius
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.cpuCelsius == cpuBeforeStop)
     }
 }

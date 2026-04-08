@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 @Observable
 public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapshot> {
+    private var lastSnapshot = MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+
     public private(set) var tileModel = MetricTileModel(
         title: "Media Engine",
         value: "—",
@@ -14,18 +16,12 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
         systemImage: "film.stack"
     )
 
-    @ObservationIgnored
-    public private(set) var encodeMilliwatts: Double?
-    @ObservationIgnored
-    public private(set) var decodeMilliwatts: Double?
-    @ObservationIgnored
-    public private(set) var gaugeValue: Double?
-    @ObservationIgnored
-    public private(set) var encodeLabel: String = "Enc: —"
-    @ObservationIgnored
-    public private(set) var decodeLabel: String = "Dec: —"
-    @ObservationIgnored
-    public private(set) var combinedLabel: String = "—"
+    public var encodeMilliwatts: Double? { lastSnapshot.encodeMilliwatts }
+    public var decodeMilliwatts: Double? { lastSnapshot.decodeMilliwatts }
+    public var gaugeValue: Double? { combinedMilliwatts.map { min(1.0, max(0.0, $0 / adaptiveMax)) } }
+    public var encodeLabel: String { encodeMilliwatts.map { "Enc: \($0.milliwattsFormatted())" } ?? "Enc: —" }
+    public var decodeLabel: String { decodeMilliwatts.map { "Dec: \($0.milliwattsFormatted())" } ?? "Dec: —" }
+    public var combinedLabel: String { combinedMilliwatts.map { $0.milliwattsFormatted() } ?? "—" }
 
     private var adaptiveMax: Double = 100.0  // mW; grows with observed values
 
@@ -37,30 +33,26 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
         switch (encodeMilliwatts, decodeMilliwatts) {
         case let (enc?, dec?): return enc + dec
         case let (enc?, nil): return enc
-        case let (nil, dec): return dec
+        case let (nil, dec?): return dec
+        case (nil, nil): return nil
         }
     }
 
     override public func receive(_ snapshot: MediaEngineSnapshot) {
-        encodeMilliwatts = snapshot.encodeMilliwatts
-        decodeMilliwatts = snapshot.decodeMilliwatts
+        lastSnapshot = snapshot
         let combinedMilliwatts = combinedMilliwatts
         if let combined = combinedMilliwatts, combined > adaptiveMax { adaptiveMax = combined }
         let normalized = combinedMilliwatts.map { min(1.0, $0 / adaptiveMax) } ?? 0
-        gaugeValue = combinedMilliwatts.map { min(1.0, max(0.0, $0 / adaptiveMax)) }
-        encodeLabel = snapshot.encodeMilliwatts.map { String(format: "Enc: %.0f mW", $0) } ?? "Enc: —"
-        decodeLabel = snapshot.decodeMilliwatts.map { String(format: "Dec: %.0f mW", $0) } ?? "Dec: —"
-        combinedLabel = combinedMilliwatts.map { String(format: "%.0f mW", $0) } ?? "—"
         appendHistory(normalized)
-        let newTileModel = Self.makeTileModel(
-            combinedLabel: combinedLabel,
-            gaugeValue: gaugeValue,
-            history: history,
-            decodeLabel: decodeLabel
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                combinedLabel: combinedLabel,
+                gaugeValue: gaugeValue,
+                history: history,
+                decodeLabel: decodeLabel
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -82,8 +74,8 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
 
     public var detailModel: DetailModel {
         var stats: [DetailModel.Stat] = []
-        if let enc = encodeMilliwatts { stats.append(.init(label: "Encode", value: String(format: "%.0f mW", enc))) }
-        if let dec = decodeMilliwatts { stats.append(.init(label: "Decode", value: String(format: "%.0f mW", dec))) }
+        if let enc = encodeMilliwatts { stats.append(.init(label: "Encode", value: enc.milliwattsFormatted())) }
+        if let dec = decodeMilliwatts { stats.append(.init(label: "Decode", value: dec.milliwattsFormatted())) }
         return DetailModel(
             title: "Media Engine",
             systemImage: "film.stack",

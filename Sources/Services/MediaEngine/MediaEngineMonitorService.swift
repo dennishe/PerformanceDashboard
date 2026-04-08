@@ -14,7 +14,7 @@ public struct MediaEngineSnapshot: Sendable {
 public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnapshot> {
     #if arch(arm64)
     /// Injected sampler; defaults to `PMPSampler.shared` at first use inside poll().
-    @MonitorActor var sampler: any PMPSamplerProtocol = PMPSampler.shared
+    @MonitorActor var sampler: PMPSampler = .shared
     #endif
 
     @MonitorActor
@@ -45,9 +45,9 @@ public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnap
 /// The `AVE` (encoder) and `VDEC` (decoder) channels are in `PMP / Energy Counters`;
 /// values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
 private struct MediaEngineState {
-    private let sampler: any PMPSamplerProtocol
+    private let sampler: PMPSampler
 
-    init(sampler: some PMPSamplerProtocol) {
+    init(sampler: PMPSampler) {
         self.sampler = sampler
     }
 

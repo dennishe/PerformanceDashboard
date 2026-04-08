@@ -12,7 +12,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .inactive)
     }
 
@@ -24,7 +24,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -36,7 +36,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .warning)
     }
 
@@ -48,7 +48,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
 
@@ -60,7 +60,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(viewModel.history.last == 0.75)
     }
@@ -73,10 +73,10 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let chargeBeforeStop = viewModel.snapshot.chargeFraction
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.snapshot.chargeFraction == chargeBeforeStop)
     }
 }

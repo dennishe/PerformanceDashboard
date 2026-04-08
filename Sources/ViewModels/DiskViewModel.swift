@@ -4,54 +4,39 @@ import SwiftUI
 @MainActor
 @Observable
 public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
-    private static let byteFormatter: ByteCountFormatter = {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter
-    }()
+    private var lastSnapshot = DiskSnapshot(usage: 0, total: 0, available: 0)
 
     public private(set) var tileModel = MetricTileModel(
         title: "Disk",
-        value: DiskViewModel.makeUsageLabel(for: 0),
+        value: 0.percentFormatted(),
         gaugeValue: 0,
         history: Constants.prefilledHistory,
         thresholdLevel: .normal,
-        subtitle: DiskViewModel.byteFormatter.string(fromByteCount: 0) + " free",
+        subtitle: AppFormatters.byteCountString(0, style: .file) + " free",
         systemImage: "internaldrive"
     )
 
-    @ObservationIgnored
-    public private(set) var usage: Double = 0
-    @ObservationIgnored
-    public private(set) var totalBytes: Int64 = 0
-    @ObservationIgnored
-    public private(set) var availableBytes: Int64 = 0
-    @ObservationIgnored
-    public private(set) var usageLabel: String = DiskViewModel.makeUsageLabel(for: 0)
-    @ObservationIgnored
-    public private(set) var availableLabel: String = DiskViewModel.byteFormatter.string(fromByteCount: 0)
-    @ObservationIgnored
-    public private(set) var totalLabel: String = DiskViewModel.byteFormatter.string(fromByteCount: 0)
+    public var usage: Double { lastSnapshot.usage }
+    public var totalBytes: Int64 { lastSnapshot.total }
+    public var availableBytes: Int64 { lastSnapshot.available }
+    public var usageLabel: String { usage.percentFormatted() }
+    public var availableLabel: String { AppFormatters.byteCountString(availableBytes, style: .file) }
+    public var totalLabel: String { AppFormatters.byteCountString(totalBytes, style: .file) }
 
     public var thresholdLevel: ThresholdLevel { DiskThreshold().level(for: usage) }
 
     override public func receive(_ snapshot: DiskSnapshot) {
-        usage          = snapshot.usage
-        totalBytes     = snapshot.total
-        availableBytes = snapshot.available
-        usageLabel = Self.makeUsageLabel(for: snapshot.usage)
-        availableLabel = Self.byteFormatter.string(fromByteCount: snapshot.available)
-        totalLabel = Self.byteFormatter.string(fromByteCount: snapshot.total)
+        lastSnapshot = snapshot
         appendHistory(snapshot.usage)
-        let newTileModel = Self.makeTileModel(
-            usage: usage,
-            usageLabel: usageLabel,
-            availableLabel: availableLabel,
-            history: history
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                usage: usage,
+                usageLabel: usageLabel,
+                availableLabel: availableLabel,
+                history: history
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -69,10 +54,6 @@ public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
             subtitle: availableLabel + " free",
             systemImage: "internaldrive"
         )
-    }
-
-    private static func makeUsageLabel(for usage: Double) -> String {
-        String(format: "%.1f%%", usage * 100)
     }
 
     public var detailModel: DetailModel {

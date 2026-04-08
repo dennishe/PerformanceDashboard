@@ -4,6 +4,8 @@ import SwiftUI
 @MainActor
 @Observable
 public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
+    private var lastSnapshot = FanSnapshot(fans: [])
+
     public private(set) var tileModel = MetricTileModel(
         title: "Fans",
         value: "No fans",
@@ -13,14 +15,10 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
         systemImage: "fan"
     )
 
-    @ObservationIgnored
-    public private(set) var fans: [FanReading] = []
-    @ObservationIgnored
-    public private(set) var gaugeValue: Double?
-    @ObservationIgnored
-    public private(set) var primaryLabel: String = "No fans"
-    @ObservationIgnored
-    public private(set) var subtitle: String?
+    public var fans: [FanReading] { lastSnapshot.fans }
+    public var gaugeValue: Double? { fans.map(\.fraction).max().map { max($0, 0) } }
+    public var primaryLabel: String { Self.makePrimaryLabel(from: fans) }
+    public var subtitle: String? { Self.makeSubtitle(from: fans) }
 
     public var thresholdLevel: ThresholdLevel {
         guard !fans.isEmpty else { return .inactive }
@@ -28,21 +26,18 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
     }
 
     override public func receive(_ snapshot: FanSnapshot) {
-        fans = snapshot.fans
+        lastSnapshot = snapshot
         let fraction = fans.map(\.fraction).max() ?? 0
-        gaugeValue = fans.map(\.fraction).max().map { max($0, 0) }
-        primaryLabel = Self.makePrimaryLabel(from: fans)
-        subtitle = Self.makeSubtitle(from: fans)
         appendHistory(fraction)
-        let newTileModel = Self.makeTileModel(
-            primaryLabel: primaryLabel,
-            gaugeValue: gaugeValue,
-            history: history,
-            subtitle: subtitle
+        assignIfChanged(
+            &tileModel,
+            to: Self.makeTileModel(
+                primaryLabel: primaryLabel,
+                gaugeValue: gaugeValue,
+                history: history,
+                subtitle: subtitle
+            )
         )
-        if tileModel != newTileModel {
-            tileModel = newTileModel
-        }
     }
 
     private static func makeTileModel(
@@ -68,7 +63,7 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
         guard let fastest = fans.max(by: { $0.current < $1.current }) else {
             return "No fans"
         }
-        return String(format: "%.0f RPM", fastest.current)
+        return fastest.current.rpmFormatted()
     }
 
     private static func makeSubtitle(from fans: [FanReading]) -> String? {
@@ -80,9 +75,10 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
 
     public var detailModel: DetailModel {
         let stats = fans.enumerated().map { index, fan in
-            DetailModel.Stat(
+            let currentRPM = fan.current.rpmFormatted().replacingOccurrences(of: " RPM", with: "")
+            return DetailModel.Stat(
                 label: "Fan \(index + 1)",
-                value: String(format: "%.0f / %.0f RPM", fan.current, fan.max)
+                value: "\(currentRPM) / \(fan.max.rpmFormatted())"
             )
         }
         return DetailModel(

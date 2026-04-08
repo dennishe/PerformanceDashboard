@@ -9,7 +9,7 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.aneUsage == 0.25)
     }
@@ -20,7 +20,7 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
 
         #expect(viewModel.usageLabel == "N/A")
     }
@@ -35,11 +35,11 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let usageBeforeStop = viewModel.aneUsage
         viewModel.stop()
 
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.aneUsage == usageBeforeStop)
     }
 }

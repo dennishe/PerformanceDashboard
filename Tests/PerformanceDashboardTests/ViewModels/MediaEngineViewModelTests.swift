@@ -9,7 +9,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 4.0, decodeMilliwatts: 54.0)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.encodeMilliwatts == 4.0)
         #expect(viewModel.decodeMilliwatts == 54.0)
     }
@@ -19,7 +19,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == nil)
     }
 
@@ -28,7 +28,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 30.0, decodeMilliwatts: 20.0)]  // 50/100 = 0.5
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -37,7 +37,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 50.0, decodeMilliwatts: nil)]  // 50/100 = 0.5
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -46,7 +46,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: 50.0)]  // 50/100 = 0.5
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -55,7 +55,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 60.0, decodeMilliwatts: 80.0)]  // 140 > 100
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         // adaptiveMax grows to 140; gaugeValue = 140/140 = 1.0
         #expect(viewModel.gaugeValue == 1.0)
     }
@@ -65,7 +65,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 12.0, decodeMilliwatts: nil)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.encodeLabel == "Enc: 12 mW")
     }
 
@@ -74,7 +74,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.encodeLabel == "Enc: —")
     }
 
@@ -83,7 +83,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: 54.0)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.decodeLabel == "Dec: 54 mW")
     }
 
@@ -92,7 +92,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.decodeLabel == "Dec: —")
     }
 
@@ -101,7 +101,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 30.0, decodeMilliwatts: 20.0)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.combinedLabel == "50 mW")
     }
 
@@ -110,7 +110,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.combinedLabel == "—")
     }
 
@@ -119,7 +119,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 20.0, decodeMilliwatts: 20.0)]  // 40/100 = 0.4 < 0.6
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -128,7 +128,7 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 30.0, decodeMilliwatts: 20.0)]  // 50/100 = 0.5
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
@@ -138,10 +138,10 @@ struct MediaEngineViewModelTests {
         monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 4.0, decodeMilliwatts: 54.0)]
         let viewModel = MediaEngineViewModel(monitor: monitor)
         viewModel.start()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         let encBeforeStop = viewModel.encodeMilliwatts
         viewModel.stop()
-        try? await Task.sleep(for: .milliseconds(50))
+        await waitForAsyncUpdates()
         #expect(viewModel.encodeMilliwatts == encBeforeStop)
     }
 }
