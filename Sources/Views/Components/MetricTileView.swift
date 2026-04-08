@@ -63,10 +63,18 @@ struct MetricTileView: View {
             .font(.system(size: 26, weight: .semibold, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(gaugeColor)
+            .contentTransition(.numericText())
+            .accessibilityLabel(model.accessibilityLabel)
+            .accessibilityValue(model.value)
     }
 
     @ViewBuilder private var subtitleText: some View {
-        if let subtitle = model.subtitle {
+        if let reason = model.unavailableReason, model.gaugeValue == nil {
+            Label(reason, systemImage: "exclamationmark.circle")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+        } else if let subtitle = model.subtitle {
             Text(verbatim: subtitle)
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)

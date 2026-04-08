@@ -74,4 +74,19 @@ public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
     private static func makeUsageLabel(for usage: Double) -> String {
         String(format: "%.1f%%", usage * 100)
     }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "Disk",
+            systemImage: "internaldrive",
+            primaryValue: usageLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: [
+                .init(label: "Used", value: usageLabel),
+                .init(label: "Free", value: availableLabel),
+                .init(label: "Total", value: totalLabel)
+            ]
+        )
+    }
 }

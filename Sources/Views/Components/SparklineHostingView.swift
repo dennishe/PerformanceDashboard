@@ -3,6 +3,7 @@ import AppKit
 struct SparklineStyle: Hashable {
     let color: LayerColorComponents
     let displayScale: CGFloat
+    var showFill: Bool = true
 }
 
 private struct SparklineSignature: Hashable {
@@ -51,6 +52,7 @@ final class SparklineHostingView: NSView {
             "bounds": NSNull(),
             "contentsScale": NSNull(),
             "frame": NSNull(),
+            "hidden": NSNull(),
             "position": NSNull()
         ]
 
@@ -111,6 +113,7 @@ final class SparklineHostingView: NSView {
         CATransaction.setDisableActions(true)
         gradientLayer.contentsScale = style.displayScale
         lineLayer.contentsScale = style.displayScale
+        gradientLayer.isHidden = !style.showFill
         gradientLayer.colors = [
             style.color.cgColor(alphaMultiplier: 0.22),
             style.color.cgColor(alphaMultiplier: 0.02)

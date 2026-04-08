@@ -59,6 +59,7 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: subtitle,
+            unavailableReason: gaugeValue == nil ? "No fans detected" : nil,
             systemImage: "fan"
         )
     }
@@ -75,5 +76,22 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
         return fans.enumerated()
             .map { index, fan in "F\(index): \(Int(fan.current)) / \(Int(fan.max))" }
             .joined(separator: " · ")
+    }
+
+    public var detailModel: DetailModel {
+        let stats = fans.enumerated().map { index, fan in
+            DetailModel.Stat(
+                label: "Fan \(index + 1)",
+                value: String(format: "%.0f / %.0f RPM", fan.current, fan.max)
+            )
+        }
+        return DetailModel(
+            title: "Fans",
+            systemImage: "fan",
+            primaryValue: primaryLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: stats
+        )
     }
 }

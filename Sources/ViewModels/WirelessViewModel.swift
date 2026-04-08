@@ -26,7 +26,11 @@ public final class WirelessViewModel {
     @ObservationIgnored
     public private(set) var bluetoothOn: Bool = false
     @ObservationIgnored
+    public private(set) var bluetoothPeripherals: [PeripheralBattery] = []
+    @ObservationIgnored
     public private(set) var history: [Double] = Constants.prefilledHistory
+    @ObservationIgnored
+    private var extendedHistory: [Double] = []
     @ObservationIgnored
     public private(set) var gaugeValue: Double?
     @ObservationIgnored
@@ -94,6 +98,7 @@ public final class WirelessViewModel {
         gaugeValue = snapshot.on ? (snapshot.rssi.map { WirelessViewModel.normaliseRSSI($0) } ?? 0) : nil
         signalLabel = Self.makeSignalLabel(wifiOn: snapshot.on, rssi: snapshot.rssi)
         history = updatedHistory(from: history, adding: normalized)
+        extendedHistory = updatedExtendedHistory(from: extendedHistory, adding: normalized)
         let newTileModel = Self.makeTileModel(
             signalLabel: signalLabel,
             gaugeValue: gaugeValue,
@@ -109,6 +114,7 @@ public final class WirelessViewModel {
     private func receiveBluetooth(_ snapshot: BluetoothSnapshot) {
         bluetoothConnectedCount = snapshot.connectedCount
         bluetoothOn             = snapshot.on
+        bluetoothPeripherals    = snapshot.peripherals
         bluetoothLabel = Self.makeBluetoothLabel(on: snapshot.on, connectedCount: snapshot.connectedCount)
         let newTileModel = Self.makeTileModel(
             signalLabel: signalLabel,
@@ -149,6 +155,15 @@ public final class WirelessViewModel {
         return updatedHistory
     }
 
+    private func updatedExtendedHistory(from history: [Double], adding value: Double) -> [Double] {
+        var updated = history
+        updated.append(value)
+        if updated.count > Constants.extendedHistorySamples {
+            updated.removeFirst(updated.count - Constants.extendedHistorySamples)
+        }
+        return updated
+    }
+
     private static func makeSignalLabel(wifiOn: Bool, rssi: Int?) -> String {
         guard wifiOn else { return "Wi-Fi Off" }
         guard let rssi else { return "Disconnected" }
@@ -158,5 +173,28 @@ public final class WirelessViewModel {
     private static func makeBluetoothLabel(on: Bool, connectedCount: Int) -> String {
         guard on else { return "BT Off" }
         return "BT: \(connectedCount) connected"
+    }
+
+    public var detailModel: DetailModel {
+        var stats: [DetailModel.Stat] = []
+        if let ssid = wifiSSID { stats.append(.init(label: "Network", value: ssid)) }
+        if let rssi = wifiRSSI { stats.append(.init(label: "Signal", value: "\(rssi) dBm")) }
+        if bluetoothOn {
+            if bluetoothPeripherals.isEmpty {
+                stats.append(.init(label: "Bluetooth", value: "\(bluetoothConnectedCount) connected"))
+            } else {
+                for peripheral in bluetoothPeripherals {
+                    stats.append(.init(label: peripheral.name, value: "\(peripheral.percent)%"))
+                }
+            }
+        }
+        return DetailModel(
+            title: "Wireless",
+            systemImage: "wifi",
+            primaryValue: signalLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: stats
+        )
     }
 }

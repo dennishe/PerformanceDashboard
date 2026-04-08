@@ -69,7 +69,22 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: gpuLabel,
+            unavailableReason: gaugeValue == nil ? "Temperature sensor unavailable" : nil,
             systemImage: "thermometer.medium"
+        )
+    }
+
+    public var detailModel: DetailModel {
+        var stats: [DetailModel.Stat] = []
+        if let cpu = cpuCelsius { stats.append(.init(label: "CPU", value: String(format: "%.1f°C", cpu))) }
+        if let gpu = gpuCelsius { stats.append(.init(label: "GPU", value: String(format: "%.1f°C", gpu))) }
+        return DetailModel(
+            title: "Temperature",
+            systemImage: "thermometer.medium",
+            primaryValue: cpuLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: stats
         )
     }
 }

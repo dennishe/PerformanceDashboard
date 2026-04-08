@@ -11,6 +11,9 @@ enum Constants {
     /// Zero-prefilled history used so sparklines render at full width from launch.
     static let prefilledHistory: [Double] = Array(repeating: 0, count: historySamples)
 
+    /// Number of extended historical samples for the detail view (≈ 15 minutes at 1 Hz).
+    static let extendedHistorySamples: Int = 900
+
     /// Short coalescing window for applying sampled values on the main actor.
     /// This keeps tiles visually in sync without adding a perceptible delay.
     static let updateCoalescingInterval: Duration = .milliseconds(25)

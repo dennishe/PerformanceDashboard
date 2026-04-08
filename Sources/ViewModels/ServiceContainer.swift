@@ -7,6 +7,7 @@ import Foundation
 @MainActor
 @Observable
 final class ServiceContainer {
+    let settings      = DashboardSettings()
     let cpu           = CPUViewModel(monitor: CPUMonitorService())
     let gpu           = GPUViewModel(monitor: GPUMonitorService())
     let memory        = MemoryViewModel(monitor: MemoryMonitorService())

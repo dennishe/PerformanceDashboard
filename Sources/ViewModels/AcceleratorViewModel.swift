@@ -51,4 +51,15 @@ public final class AcceleratorViewModel: MonitorViewModelBase<AcceleratorSnapsho
         guard let usage else { return "N/A" }
         return String(format: "%.1f%%", usage * 100)
     }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "ANE",
+            systemImage: "brain",
+            primaryValue: usageLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: aneUsage != nil ? [.init(label: "Utilisation", value: usageLabel)] : []
+        )
+    }
 }

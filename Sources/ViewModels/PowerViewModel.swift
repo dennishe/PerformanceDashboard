@@ -57,4 +57,15 @@ public final class PowerViewModel: MonitorViewModelBase<PowerSnapshot> {
             systemImage: "bolt"
         )
     }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "Power",
+            systemImage: "bolt",
+            primaryValue: wattsLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: watts.map { [.init(label: "Draw", value: String(format: "%.2f W", $0))] } ?? []
+        )
+    }
 }

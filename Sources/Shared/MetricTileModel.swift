@@ -9,6 +9,8 @@ public struct MetricTileModel: Equatable, Sendable {
     public let history: [Double]
     public let thresholdLevel: ThresholdLevel
     public let subtitle: String?
+    /// Short explanation shown when `gaugeValue` is `nil` (metric unavailable on this device).
+    public let unavailableReason: String?
     public let systemImage: String
     public let accessibilityLabel: String
     public let gaugeAccessibilityLabel: String
@@ -21,6 +23,7 @@ public struct MetricTileModel: Equatable, Sendable {
         history: [Double],
         thresholdLevel: ThresholdLevel,
         subtitle: String? = nil,
+        unavailableReason: String? = nil,
         systemImage: String,
         accessibilityLabel: String? = nil
     ) {
@@ -31,6 +34,7 @@ public struct MetricTileModel: Equatable, Sendable {
         self.history = history
         self.thresholdLevel = thresholdLevel
         self.subtitle = subtitle
+        self.unavailableReason = unavailableReason
         self.systemImage = systemImage
         let accessibilityLabel = accessibilityLabel ?? title
         self.accessibilityLabel = accessibilityLabel

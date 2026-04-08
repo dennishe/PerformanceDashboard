@@ -13,6 +13,10 @@ open class MonitorViewModelBase<Snapshot: Sendable> {
     @ObservationIgnored
     public private(set) var history: [Double] = Constants.prefilledHistory
 
+    /// Up to 900 samples for the 15-minute detail chart.
+    @ObservationIgnored
+    public private(set) var extendedHistory: [Double] = []
+
     private var monitorTask: Task<Void, Never>?
     private let _monitor: any MetricMonitorProtocol<Snapshot>
 
@@ -42,13 +46,19 @@ open class MonitorViewModelBase<Snapshot: Sendable> {
         preconditionFailure("\(type(of: self)) must override receive(_:)")
     }
 
-    /// Appends `value` to the sparkline history and trims to `Constants.historySamples`.
+    /// Appends `value` to both the sparkline history and the extended detail history.
     func appendHistory(_ value: Double) {
-        var updatedHistory = history
-        updatedHistory.append(value)
-        if updatedHistory.count > Constants.historySamples {
-            updatedHistory.removeFirst(updatedHistory.count - Constants.historySamples)
+        history = Self.appendRingBuffer(history, value: value, maxCount: Constants.historySamples)
+        extendedHistory = Self.appendRingBuffer(extendedHistory, value: value,
+                                                maxCount: Constants.extendedHistorySamples)
+    }
+
+    private static func appendRingBuffer(_ buffer: [Double], value: Double, maxCount: Int) -> [Double] {
+        var updated = buffer
+        updated.append(value)
+        if updated.count > maxCount {
+            updated.removeFirst(updated.count - maxCount)
         }
-        history = updatedHistory
+        return updated
     }
 }

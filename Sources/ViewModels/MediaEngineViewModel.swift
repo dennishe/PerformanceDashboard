@@ -79,4 +79,18 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
             systemImage: "film.stack"
         )
     }
+
+    public var detailModel: DetailModel {
+        var stats: [DetailModel.Stat] = []
+        if let enc = encodeMilliwatts { stats.append(.init(label: "Encode", value: String(format: "%.0f mW", enc))) }
+        if let dec = decodeMilliwatts { stats.append(.init(label: "Decode", value: String(format: "%.0f mW", dec))) }
+        return DetailModel(
+            title: "Media Engine",
+            systemImage: "film.stack",
+            primaryValue: combinedLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: stats
+        )
+    }
 }

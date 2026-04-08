@@ -10,6 +10,7 @@ struct LayerColorComponents: Hashable {
     static let warning = LayerColorComponents(nsColor: .systemOrange)
     static let critical = LayerColorComponents(nsColor: .systemRed)
     static let inactive = LayerColorComponents(nsColor: .secondaryLabelColor)
+    static let blue = LayerColorComponents(nsColor: .systemBlue)
 
     init(nsColor: NSColor) {
         let converted = nsColor.usingColorSpace(.deviceRGB)

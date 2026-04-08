@@ -67,6 +67,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: statusLabel,
+            unavailableReason: snapshot.isPresent ? nil : "No battery on this Mac",
             systemImage: "battery.100"
         )
     }
@@ -86,5 +87,29 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
             return hours > 0 ? "\(hours)h \(mins)m left" : "\(mins)m left"
         }
         return "On battery"
+    }
+
+    public var detailModel: DetailModel {
+        var stats: [DetailModel.Stat] = []
+        if snapshot.isPresent {
+            stats.append(.init(label: "Charge", value: chargeLabel))
+            if let cycles = snapshot.cycleCount {
+                stats.append(.init(label: "Cycle count", value: "\(cycles)"))
+            }
+            if let health = snapshot.healthFraction {
+                stats.append(.init(label: "Health", value: String(format: "%.1f%%", health * 100)))
+            }
+            if let status = statusLabel {
+                stats.append(.init(label: "Status", value: status))
+            }
+        }
+        return DetailModel(
+            title: "Battery",
+            systemImage: "battery.100",
+            primaryValue: chargeLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: stats
+        )
     }
 }

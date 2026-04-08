@@ -12,6 +12,20 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         return formatter
     }()
 
+    // MARK: - Combined tile (MetricTilePresenting)
+
+    public private(set) var tileModel = MetricTileModel(
+        title: "Network",
+        value: "0 KB/s",
+        gaugeValue: 0,
+        history: Constants.prefilledHistory,
+        thresholdLevel: .normal,
+        subtitle: "↓ 0 KB/s  ↑ 0 KB/s",
+        systemImage: "network"
+    )
+
+    // MARK: - Per-direction models (used by NetworkTileView detail rows)
+
     public private(set) var inTileModel = MetricTileModel(
         title: "Net In",
         value: "0 KB/s",
@@ -65,6 +79,7 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
 
         let normalizedIn = min(snapshot.bytesInPerSecond / Self.ceilingBytesPerSecond, 1)
         let normalizedOut = min(snapshot.bytesOutPerSecond / Self.ceilingBytesPerSecond, 1)
+        let combinedGauge = max(normalizedIn, normalizedOut)
 
         inGauge = normalizedIn
         outGauge = normalizedOut
@@ -72,29 +87,33 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         historyOut = updatedHistory(from: historyOut, adding: snapshot.bytesOutPerSecond)
         historyInGauge = updatedHistory(from: historyInGauge, adding: normalizedIn)
         historyOutGauge = updatedHistory(from: historyOutGauge, adding: normalizedOut)
+        // Base-class history tracks the dominant direction's normalized gauge (combined sparkline).
+        appendHistory(combinedGauge)
 
-        let thresholdLevel = self.thresholdLevel
-        let newInTileModel = Self.makeTileModel(
-            direction: .inbound,
-            value: inLabel,
-            gaugeValue: inGauge,
-            history: historyInGauge,
-            thresholdLevel: thresholdLevel
-        )
-        if inTileModel != newInTileModel {
-            inTileModel = newInTileModel
-        }
+        let level = self.thresholdLevel
+        let totalLabel = bytesPerSecondLabel(snapshot.bytesInPerSecond + snapshot.bytesOutPerSecond)
+        updateAllTileModels(totalLabel: totalLabel, combinedGauge: combinedGauge, thresholdLevel: level)
+    }
 
-        let newOutTileModel = Self.makeTileModel(
-            direction: .outbound,
-            value: outLabel,
-            gaugeValue: outGauge,
-            history: historyOutGauge,
-            thresholdLevel: thresholdLevel
+    private func updateAllTileModels(
+        totalLabel: String, combinedGauge: Double, thresholdLevel: ThresholdLevel
+    ) {
+        let newTile = MetricTileModel(
+            title: "Network", value: totalLabel, gaugeValue: combinedGauge,
+            history: history, thresholdLevel: thresholdLevel,
+            subtitle: "↓ \(inLabel)  ↑ \(outLabel)", systemImage: "network"
         )
-        if outTileModel != newOutTileModel {
-            outTileModel = newOutTileModel
-        }
+        if tileModel != newTile { tileModel = newTile }
+
+        let newIn = Self.makeTileModel(direction: .inbound, value: inLabel,
+                                       gaugeValue: inGauge, history: historyInGauge,
+                                       thresholdLevel: thresholdLevel)
+        if inTileModel != newIn { inTileModel = newIn }
+
+        let newOut = Self.makeTileModel(direction: .outbound, value: outLabel,
+                                        gaugeValue: outGauge, history: historyOutGauge,
+                                        thresholdLevel: thresholdLevel)
+        if outTileModel != newOut { outTileModel = newOut }
     }
 
     private enum TileDirection {
@@ -140,5 +159,19 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
             updatedHistory.removeFirst(updatedHistory.count - Constants.historySamples)
         }
         return updatedHistory
+    }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "Network",
+            systemImage: "network",
+            primaryValue: bytesPerSecondLabel(bytesInPerSecond + bytesOutPerSecond),
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: [
+                .init(label: "Download ↓", value: inLabel),
+                .init(label: "Upload ↑", value: outLabel)
+            ]
+        )
     }
 }

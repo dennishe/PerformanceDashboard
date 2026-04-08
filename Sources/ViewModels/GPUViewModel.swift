@@ -39,6 +39,7 @@ public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
             gaugeValue: usage,
             history: history,
             thresholdLevel: GPUThreshold().level(for: usage ?? 0),
+            unavailableReason: usage == nil ? "GPU stats unavailable" : nil,
             systemImage: "display"
         )
     }
@@ -46,5 +47,16 @@ public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
     private static func makeUsageLabel(for usage: Double?) -> String {
         guard let usage else { return "N/A" }
         return String(format: "%.1f%%", usage * 100)
+    }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "GPU",
+            systemImage: "display",
+            primaryValue: usageLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: usage != nil ? [.init(label: "Utilisation", value: usageLabel)] : []
+        )
     }
 }

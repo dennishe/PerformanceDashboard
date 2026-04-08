@@ -9,11 +9,12 @@ enum SparklineGeometry {
 struct SparklineView: View {
     let history: [Double]
     let color: LayerColorComponents
+    var showFill: Bool = true
     let accessibilityLabel: String
     let accessibilityValue: String
 
     var body: some View {
-        SparklineRepresentable(history: history, color: color)
+        SparklineRepresentable(history: history, color: color, showFill: showFill)
             .equatable()
             .accessibilityLabel(accessibilityLabel)
             .accessibilityValue(accessibilityValue)
@@ -23,6 +24,7 @@ struct SparklineView: View {
 private struct SparklineRepresentable: NSViewRepresentable, Equatable {
     let history: [Double]
     let color: LayerColorComponents
+    var showFill: Bool = true
 
     func makeNSView(context: Context) -> SparklineHostingView {
         SparklineHostingView()
@@ -42,7 +44,8 @@ private struct SparklineRepresentable: NSViewRepresentable, Equatable {
             history: history,
             style: SparklineStyle(
                 color: color,
-                displayScale: context.environment.displayScale
+                displayScale: context.environment.displayScale,
+                showFill: showFill
             )
         )
     }

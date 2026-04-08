@@ -21,20 +21,24 @@ struct DashboardLayout: Layout {
 
     struct Cache: Sendable {
         var subviewCount: Int = 0
+        /// Stored so `updateCache` can detect when the density preset changed.
+        var minTileWidth: CGFloat = 0
         // Keyed by available width so minSize probes never evict the display-width entry.
         var entries: [CGFloat: DashboardLayoutEntry] = [:]
         var lastReportedHeight: CGFloat?
     }
 
     func makeCache(subviews: Subviews) -> Cache {
-        Cache(subviewCount: subviews.count)
+        Cache(subviewCount: subviews.count, minTileWidth: minTileWidth)
     }
 
     func updateCache(_ cache: inout Cache, subviews: Subviews) {
-        // Invalidate entries when subview count changes (e.g. arm64 tiles toggled at runtime).
-        if cache.subviewCount != subviews.count {
+        // Invalidate when subview count changes or when minTileWidth changes (density preset).
+        if cache.subviewCount != subviews.count || cache.minTileWidth != minTileWidth {
             cache.entries = [:]
+            cache.lastReportedHeight = nil
             cache.subviewCount = subviews.count
+            cache.minTileWidth = minTileWidth
         }
     }
 

@@ -77,4 +77,20 @@ public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
     private static func makeUsageLabel(for usage: Double) -> String {
         String(format: "%.1f%%", usage * 100)
     }
+
+    public var detailModel: DetailModel {
+        DetailModel(
+            title: "Memory",
+            systemImage: "memorychip",
+            primaryValue: usageLabel,
+            thresholdLevel: thresholdLevel,
+            history: extendedHistory,
+            stats: [
+                .init(label: "Used", value: usedLabel),
+                .init(label: "Total", value: totalLabel),
+                .init(label: "Free", value: Self.byteFormatter.string(fromByteCount:
+                    Int64(totalBytes) - Int64(usedBytes)))
+            ]
+        )
+    }
 }

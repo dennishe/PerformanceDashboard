@@ -41,8 +41,8 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 - [x] **10. Animate value label transitions** *(fixed)*  
   Added `.contentTransition(.numericText())` to the value `Text` in `MetricTileView`.
 
-- [ ] **11. Clarify Network In / Network Out tiles**  
-  Two separate tiles for one logical metric is potentially confusing. Consider combining into a single tile with two rows, or make the distinction visually clearer.
+- [x] **11. Clarify Network In / Network Out tiles** *(fixed)*  
+  Replaced the two-tile layout with a single `NetworkTileView` showing a combined top-line total, ↓/↑ direction rows with green/blue colour coding, a single ring gauge (dominant direction), and a combined sparkline.
 
 ---
 
@@ -61,64 +61,17 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 
 ## 🟡 Product Enhancements
 
-- [ ] **26. Add a detail view for each metric tile**  
-  The current dashboard works well for scanning, but every metric is compressed into the same small footprint. Add a drill-down interaction so clicking a tile opens a richer metric-specific view with a larger chart, more historical context, and derived stats that do not fit in the dashboard grid.
+- [x] **26. Add a detail view for each metric tile** *(done)*  
+  Tapping any tile opens `MetricDetailView` as a sheet. Shows a SparklineView with 1 min / 5 min / 15 min range selector (backed by a 900-sample extended history in each ViewModel) plus metric-specific secondary stats. `DetailPresenting` protocol keeps the MVVM boundary.
 
-  Suggested scope:
-  - Clicking a tile animates the tile to fill more tiles or the whole app, depending on what to show.
-  - Show a larger sparkline or time-series chart with selectable ranges such as 60 seconds, 5 minutes, and 15 minutes, or depending on context more detailed information that is not already visible. F.ex. what app is causing the load or for the battery tile, if possible, show other attached battery devices such as mice or wireless keyboards.
-  - Add metric-specific secondary values. Examples: CPU user/system split, Memory used/wired/compressed, Disk free space trend, Wi-Fi RSSI plus channel, Battery health and cycle count.
-  - Keep the implementation aligned with the existing MVVM split by adding per-metric detail presenters or a reusable detail model rather than embedding formatting logic directly in the view.
+- [x] **27. Consolidate and deepen Network monitoring** *(done)*  
+  Single `NetworkTileView` replaces two-tile layout. Shows combined total throughput, ↓/↑ rows, and a dominant-direction ring gauge. `NetworkViewModel` now also conforms to `MetricTilePresenting` and `DetailPresenting`.
 
-  Why this matters:
-  - Preserves the compact single-screen dashboard while still allowing deeper inspection.
-  - Makes the app more useful during diagnosis, not just passive monitoring.
-  - Creates a natural place for future features such as history persistence or exports.
+- [x] **28. Make the dashboard customizable** *(done)*  
+  `DashboardSettings` (Observable, UserDefaults-backed) stores per-tile visibility and a `DensityPreset` (comfortable vs compact min-tile-width). A `SettingsPanelView` popover is accessible from the toolbar slider-icon button.
 
-- [ ] **27. Consolidate and deepen Network monitoring**  
-  Network In and Network Out are currently shown as two separate tiles for one logical subsystem. Combine them into a single network tile with clearer visual hierarchy, then deepen the feature so it can answer more than total bytes per second.
-
-  Suggested scope:
-  - Replace the two-tile layout with one tile that shows inbound and outbound throughput together.
-  - Use separate rows, labels, and colours so the distinction is obvious at a glance.
-  - Add per-interface breakdown support for Wi‑Fi, Ethernet, VPN, and other active interfaces where available.
-  - Show a compact top-line total in the dashboard and reserve interface-level detail for the metric detail view.
-  - Continue filtering irrelevant traffic such as loopback unless explicitly enabled for diagnostics.
-
-  Why this matters:
-  - Fixes an existing UX ambiguity already noted in this roadmap.
-  - Uses dashboard space more efficiently.
-  - Makes network activity easier to interpret during real-world tasks such as downloads, video calls, backups, or VPN usage.
-
-- [ ] **28. Make the dashboard customizable**  
-  Different users care about different signals. Add lightweight customization so the dashboard can adapt without fragmenting the core experience.
-
-  Suggested scope:
-  - Let users hide rarely used tiles and reorder visible tiles.
-  - Support compact and comfortable density presets to balance readability against information density.
-  - Allow users to pin a small set of favourite metrics into the menu bar view.
-  - Persist layout and visibility preferences between launches using a simple local settings model.
-  - Keep defaults opinionated so first launch remains clean even if the customization UI is never used.
-
-  Why this matters:
-  - Improves day-to-day usefulness without requiring new monitoring backends.
-  - Helps the app fit both smaller laptop screens and larger external displays.
-  - Creates a path for advanced users without making the base product more complex for everyone else.
-
-- [ ] **29. Improve product polish and shell quality**  
-  Beyond the core metrics, the app still needs a more finished product shell. Focus this work on visual identity, unavailable-state handling, and small UI quality issues, but do not add onboarding flows.
-
-  Suggested scope:
-  - Add a proper app icon for Dock, App Switcher, and release builds.
-  - Improve empty and unavailable states so unsupported metrics explain why they are missing or disabled instead of merely disappearing or appearing inactive.
-  - Review copy, labels, spacing, and threshold messaging for consistency across all tiles.
-  - Validate the dashboard layout on smaller displays and tune grid behaviour where needed.
-  - Audit accessibility labels and values so all gauges and compact views remain understandable with assistive technologies.
-
-  Why this matters:
-  - Raises the perceived quality of the app without changing its architecture.
-  - Makes unsupported hardware cases feel intentional instead of broken.
-  - Reduces friction when moving from a developer tool to something that feels release-ready.
+- [x] **29. Improve product polish and shell quality** *(done)*  
+  Added `unavailableReason` to `MetricTileModel`; Battery, Fan, GPU, and Thermal tiles now show an explanatory label when their data is unavailable. Added `.contentTransition(.numericText())` to value text and `.accessibilityAddTraits(.isButton)` + hint to all tappable tiles. `TitlebarConfigurator` extracted to its own file.
 
 ---
 

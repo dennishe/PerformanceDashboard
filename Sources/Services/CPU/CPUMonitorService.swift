@@ -1,9 +1,24 @@
 import Darwin
 
+/// Per-process CPU usage from the last poll interval.
+public struct ProcessCPUStat: Sendable {
+    public let name: String
+    /// Fraction of one core [0, 1].
+    public let fraction: Double
+    public var percentLabel: String { String(format: "%.1f%%", fraction * 100) }
+}
+
 /// Snapshot of overall CPU utilisation at a point in time.
 public struct CPUSnapshot: Sendable {
     /// Overall usage as a fraction in [0, 1].
     public let usage: Double
+    /// Top processes by CPU usage, sorted descending. Empty on the first tick.
+    public let topProcesses: [ProcessCPUStat]
+
+    public init(usage: Double, topProcesses: [ProcessCPUStat] = []) {
+        self.usage = usage
+        self.topProcesses = topProcesses
+    }
 }
 
 /// Monitors CPU utilisation by computing deltas between `host_processor_info` samples.
@@ -11,11 +26,14 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     @MonitorActor
     override public func poll(continuation: AsyncStream<CPUSnapshot>.Continuation) async {
         var previous: [processor_cpu_load_info] = []
+        var prevPidTicks: [Int32: UInt64] = [:]
         var nextPoll = PollingCadence.clock.now
         while !Task.isCancelled {
             let (current, usage) = CPUMonitorService.sample(previous: previous)
+            let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(previous: prevPidTicks)
             previous = current
-            continuation.yield(CPUSnapshot(usage: usage))
+            prevPidTicks = newPidTicks
+            continuation.yield(CPUSnapshot(usage: usage, topProcesses: topProcesses))
             nextPoll = PollingCadence.nextDeadline(after: nextPoll)
             do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
         }
@@ -87,5 +105,38 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
             totalAll += all
         }
         return totalAll > 0 ? totalBusy / totalAll : 0
+    }
+
+    /// Samples per-process CPU nanoseconds and returns the top 5 consumers.
+    nonisolated static func sampleProcesses(
+        previous: [Int32: UInt64]
+    ) -> ([Int32: UInt64], [ProcessCPUStat]) {
+        let pidCount = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
+        guard pidCount > 0 else { return ([:], []) }
+        var pids = [Int32](repeating: 0, count: Int(pidCount))
+        proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, pidCount * Int32(MemoryLayout<Int32>.size))
+
+        var current: [Int32: UInt64] = [:]
+        var deltas: [(name: String, delta: UInt64)] = []
+        let taskSize = Int32(MemoryLayout<proc_taskinfo>.size)
+
+        for pid in pids where pid > 0 {
+            var info = proc_taskinfo()
+            guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, taskSize) > 0 else { continue }
+            let ticks = info.pti_total_user + info.pti_total_system
+            current[pid] = ticks
+            if let prev = previous[pid], ticks > prev {
+                var buf = [CChar](repeating: 0, count: 64)
+                proc_name(pid, &buf, UInt32(buf.count))
+                let name = String(cString: buf)
+                deltas.append((name.isEmpty ? "pid \(pid)" : name, ticks - prev))
+            }
+        }
+
+        // pti_total_user/system are in nanoseconds; 1s polling interval = 1_000_000_000 ns.
+        let top = deltas.sorted { $0.delta > $1.delta }.prefix(5).map {
+            ProcessCPUStat(name: $0.name, fraction: min(1.0, Double($0.delta) / 1_000_000_000))
+        }
+        return (current, Array(top))
     }
 }
