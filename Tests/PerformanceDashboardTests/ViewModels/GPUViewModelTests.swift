@@ -46,4 +46,66 @@ struct GPUViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.usage == usageBeforeStop)
     }
+
+    // MARK: - New coverage tests
+
+    @Test func gpuUsageLabel_formatsPercentWhenPresent() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: 0.75)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.usageLabel == "75.0%")
+    }
+
+    @Test func detailModel_hasOneUsageStat_whenUsagePresent() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: 0.65)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.stats.count == 1)
+        #expect(viewModel.detailModel.stats[0].label == "Utilisation")
+        #expect(viewModel.detailModel.stats[0].value == "65.0%")
+    }
+
+    @Test func detailModel_hasNoStats_whenUsageNil() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: nil)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.stats.isEmpty)
+    }
+
+    @Test func tileModel_hasUnavailableReason_whenUsageNil() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: nil)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.tileModel.unavailableReason == "GPU stats unavailable")
+    }
+
+    @Test func tileModel_noUnavailableReason_whenUsagePresent() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: 0.5)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.tileModel.unavailableReason == nil)
+    }
+
+    @Test func tileModel_gaugeIsNil_whenUsageNil() async {
+        let monitor = MockMonitor<GPUSnapshot>()
+        monitor.snapshots = [GPUSnapshot(usage: nil)]
+        let viewModel = GPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.tileModel.gaugeValue == nil)
+    }
+
+    @Test func gpuThreshold_warning_betweenSixtyAndEightyFive() {
+        #expect(GPUThreshold().level(for: 0.7) == .warning)
+    }
 }

@@ -63,4 +63,95 @@ struct WirelessMonitorServiceTests {
         _ = service.stream()
         service.stop()
     }
+
+    // MARK: - WiFiSnapshot additional edge cases
+
+    @Test func wifiSnapshot_strongSignal_isValid() {
+        let snapshot = WiFiSnapshot(ssid: "Home", rssi: -30, on: true)
+        #expect(snapshot.rssi == -30)
+        #expect(snapshot.on == true)
+    }
+
+    @Test func wifiSnapshot_weakSignal_isValid() {
+        let snapshot = WiFiSnapshot(ssid: "Weak", rssi: -80, on: true)
+        #expect(snapshot.rssi == -80)
+    }
+
+    @Test func wifiSnapshot_radioOff_ssidNil() {
+        let snapshot = WiFiSnapshot(ssid: nil, rssi: nil, on: false)
+        #expect(snapshot.on == false)
+        #expect(snapshot.ssid == nil)
+    }
+
+    @Test func wifiSnapshot_connectedButRssiNil() {
+        let snapshot = WiFiSnapshot(ssid: "Connected", rssi: nil, on: true)
+        #expect(snapshot.ssid == "Connected")
+        #expect(snapshot.rssi == nil)
+    }
+
+    @Test func wifiSnapshot_isSendable() {
+        let snapshot = WiFiSnapshot(ssid: "Net", rssi: -60, on: true)
+        let _: Sendable = snapshot
+    }
+
+    // MARK: - PeripheralBattery
+
+    @Test func peripheralBattery_storesNameAndPercent() {
+        let peripheral = PeripheralBattery(name: "Mouse", percent: 85)
+        #expect(peripheral.name == "Mouse")
+        #expect(peripheral.percent == 85)
+    }
+
+    @Test func peripheralBattery_fullBattery_isValid() {
+        let peripheral = PeripheralBattery(name: "Trackpad", percent: 100)
+        #expect(peripheral.percent == 100)
+    }
+
+    @Test func peripheralBattery_zeroBattery_isValid() {
+        let peripheral = PeripheralBattery(name: "Keyboard", percent: 0)
+        #expect(peripheral.percent == 0)
+    }
+
+    @Test func peripheralBattery_isSendable() {
+        let peripheral = PeripheralBattery(name: "Device", percent: 50)
+        let _: Sendable = peripheral
+    }
+
+    // MARK: - BluetoothSnapshot additional
+
+    @Test func bluetoothSnapshot_withPeripherals() {
+        let peripherals = [
+            PeripheralBattery(name: "Mouse", percent: 80),
+            PeripheralBattery(name: "Keyboard", percent: 60)
+        ]
+        let snapshot = BluetoothSnapshot(connectedCount: 2, on: true, peripherals: peripherals)
+        #expect(snapshot.connectedCount == 2)
+        #expect(snapshot.peripherals.count == 2)
+        #expect(snapshot.peripherals[0].name == "Mouse")
+        #expect(snapshot.peripherals[1].percent == 60)
+    }
+
+    @Test func bluetoothSnapshot_defaultPeripheralsAreEmpty() {
+        let snapshot = BluetoothSnapshot(connectedCount: 1, on: true)
+        #expect(snapshot.peripherals.isEmpty)
+    }
+
+    @Test func bluetoothSnapshot_isSendable() {
+        let snapshot = BluetoothSnapshot(connectedCount: 0, on: false)
+        let _: Sendable = snapshot
+    }
+
+    @Test @MainActor func wifiService_stream_returnsAsyncStream() {
+        let service = WiFiMonitorService()
+        let stream = service.stream()
+        #expect(stream is AsyncStream<WiFiSnapshot>)
+        service.stop()
+    }
+
+    @Test @MainActor func bluetoothService_stop_isIdempotent() {
+        let service = BluetoothMonitorService()
+        _ = service.stream()
+        service.stop()
+        service.stop()
+    }
 }

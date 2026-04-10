@@ -88,6 +88,61 @@ struct CPUMonitorServiceTests {
         service.stop()
     }
 
+    // MARK: - ProcessCPUStat
+
+    @Test func processCPUStat_storesName() {
+        let stat = ProcessCPUStat(name: "finder", fraction: 0.5)
+        #expect(stat.name == "finder")
+    }
+
+    @Test func processCPUStat_storesFraction() {
+        let stat = ProcessCPUStat(name: "chrome", fraction: 0.75)
+        #expect(stat.fraction == 0.75)
+    }
+
+    @Test func processCPUStat_percentLabel_formats25Percent() {
+        let stat = ProcessCPUStat(name: "test", fraction: 0.25)
+        #expect(stat.percentLabel == "25.0%")
+    }
+
+    @Test func processCPUStat_percentLabel_formats100Percent() {
+        let stat = ProcessCPUStat(name: "test", fraction: 1.0)
+        #expect(stat.percentLabel == "100.0%")
+    }
+
+    @Test func processCPUStat_percentLabel_formatsZero() {
+        let stat = ProcessCPUStat(name: "test", fraction: 0.0)
+        #expect(stat.percentLabel == "0.0%")
+    }
+
+    @Test func processCPUStat_percentLabel_formatsDecimal() {
+        let stat = ProcessCPUStat(name: "test", fraction: 0.333)
+        #expect(stat.percentLabel == "33.3%")
+    }
+
+    // MARK: - CPUSnapshot with processes
+
+    @Test func cpuSnapshot_storesMultipleProcesses() {
+        let procs = [
+            ProcessCPUStat(name: "proc1", fraction: 0.8),
+            ProcessCPUStat(name: "proc2", fraction: 0.4)
+        ]
+        let snapshot = CPUSnapshot(usage: 0.5, topProcesses: procs)
+        #expect(snapshot.topProcesses.count == 2)
+        #expect(snapshot.topProcesses[0].name == "proc1")
+        #expect(snapshot.topProcesses[1].fraction == 0.4)
+    }
+
+    @Test func cpuSnapshot_defaultsToEmptyProcesses() {
+        let snapshot = CPUSnapshot(usage: 0.55)
+        #expect(snapshot.topProcesses.isEmpty)
+    }
+
+    @Test func cpuSnapshot_isSendable() {
+        let snapshot = CPUSnapshot(usage: 0.5, topProcesses: [])
+        let _: Sendable = snapshot
+    }
+
     // MARK: - Helpers
 
     private func makeCoreLoad(

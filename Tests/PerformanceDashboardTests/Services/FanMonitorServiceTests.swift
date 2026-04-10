@@ -60,4 +60,64 @@ struct FanMonitorServiceTests {
         _ = service.stream()
         service.stop()
     }
+
+    // MARK: - Additional FanReading tests
+
+    @Test func fanReading_fraction_oneQuarter() {
+        let fan = FanReading(current: 1500, max: 6000)
+        #expect(abs(fan.fraction - 0.25) < 0.001)
+    }
+
+    @Test func fanReading_storesCurrentAndMax() {
+        let fan = FanReading(current: 2500, max: 7500)
+        #expect(fan.current == 2500)
+        #expect(fan.max == 7500)
+    }
+
+    @Test func fanReading_bothZero_fractionIsZero() {
+        let fan = FanReading(current: 0, max: 0)
+        #expect(fan.fraction == 0)
+    }
+
+    @Test func fanReading_maxEqualsCurrent_fractionIsOne() {
+        let fan = FanReading(current: 5000, max: 5000)
+        #expect(fan.fraction == 1.0)
+    }
+
+    @Test func fanReading_isSendable() {
+        let fan = FanReading(current: 3000, max: 6000)
+        let _: Sendable = fan
+    }
+
+    // MARK: - Additional FanSnapshot tests
+
+    @Test func fanSnapshot_singleFan() {
+        let fan = FanReading(current: 3000, max: 6000)
+        let snapshot = FanSnapshot(fans: [fan])
+        #expect(snapshot.fans.count == 1)
+        #expect(snapshot.fans[0].current == 3000)
+    }
+
+    @Test func fanSnapshot_preservesOrder() {
+        let fans = [
+            FanReading(current: 1000, max: 6000),
+            FanReading(current: 2000, max: 6000),
+            FanReading(current: 3000, max: 6000)
+        ]
+        let snapshot = FanSnapshot(fans: fans)
+        #expect(snapshot.fans[0].current == 1000)
+        #expect(snapshot.fans[2].current == 3000)
+    }
+
+    @Test func fanSnapshot_isSendable() {
+        let snapshot = FanSnapshot(fans: [])
+        let _: Sendable = snapshot
+    }
+
+    @Test @MainActor func service_multipleStop_isIdempotent() {
+        let service = FanMonitorService()
+        _ = service.stream()
+        service.stop()
+        service.stop()
+    }
 }

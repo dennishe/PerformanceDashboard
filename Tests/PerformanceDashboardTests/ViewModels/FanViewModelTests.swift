@@ -139,4 +139,85 @@ struct FanViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.fans.count == countBeforeStop)
     }
+
+    // MARK: - New coverage tests
+
+    @Test func gaugeValue_clampedToOne_whenCurrentExceedsMax() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 7000, max: 6000)])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.gaugeValue == 1.0)
+    }
+
+    @Test func gaugeValue_returnsMaxAcrossThreeFans() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [
+            FanReading(current: 5000, max: 6000),
+            FanReading(current: 4000, max: 6000),
+            FanReading(current: 3000, max: 6000)
+        ])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        let expected = 5000.0 / 6000.0
+        #expect(abs((viewModel.gaugeValue ?? 0) - expected) < 0.001)
+    }
+
+    @Test func primaryLabel_selectsFastestWhenNonMonotonic() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [
+            FanReading(current: 1500, max: 6000),
+            FanReading(current: 2200, max: 6000),
+            FanReading(current: 1800, max: 6000)
+        ])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.primaryLabel == "2200 RPM")
+    }
+
+    @Test func subtitle_threeFansJoined() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [
+            FanReading(current: 1200, max: 6000),
+            FanReading(current: 2400, max: 6000),
+            FanReading(current: 3600, max: 6000)
+        ])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.subtitle == "F0: 1200 / 6000 · F1: 2400 / 6000 · F2: 3600 / 6000")
+    }
+
+    @Test func detailModel_hasFanStats() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [
+            FanReading(current: 3000, max: 6000)
+        ])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.stats.count == 1)
+        #expect(viewModel.detailModel.stats[0].label == "Fan 1")
+    }
+
+    @Test func tileModel_unavailableReason_whenFanless() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.tileModel.unavailableReason == "No fans detected")
+    }
+
+    @Test func tileModel_noUnavailableReason_whenFansPresent() async {
+        let monitor = MockMonitor<FanSnapshot>()
+        monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]
+        let viewModel = FanViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.tileModel.unavailableReason == nil)
+    }
 }

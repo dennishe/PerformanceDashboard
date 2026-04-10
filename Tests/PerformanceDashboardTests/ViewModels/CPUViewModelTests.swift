@@ -63,4 +63,101 @@ struct CPUViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.usage == usageBeforeStop)
     }
+
+    // MARK: - process / detailModel coverage
+
+    @Test func topProcesses_empty_whenSnapshotHasNone() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [])]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.topProcesses.isEmpty)
+    }
+
+    @Test func topProcesses_singleProcess() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let process = ProcessCPUStat(name: "Safari", fraction: 0.25)
+        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [process])]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.topProcesses.count == 1)
+        #expect(viewModel.topProcesses[0].name == "Safari")
+        #expect(viewModel.topProcesses[0].fraction == 0.25)
+    }
+
+    @Test func topProcesses_multipleProcesses() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let processes = [
+            ProcessCPUStat(name: "Safari", fraction: 0.3),
+            ProcessCPUStat(name: "Xcode", fraction: 0.2),
+            ProcessCPUStat(name: "Python", fraction: 0.15)
+        ]
+        monitor.snapshots = [CPUSnapshot(usage: 0.65, topProcesses: processes)]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.topProcesses.count == 3)
+        #expect(viewModel.topProcesses[0].name == "Safari")
+    }
+
+    @Test func detailModel_showsUsageOnly_whenNoProcesses() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        monitor.snapshots = [CPUSnapshot(usage: 0.4, topProcesses: [])]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.stats.count == 1)
+        #expect(viewModel.detailModel.stats[0].label == "Usage")
+        #expect(viewModel.detailModel.stats[0].value == "40.0%")
+    }
+
+    @Test func detailModel_mapsProcessesToStats() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let processes = [
+            ProcessCPUStat(name: "Chrome", fraction: 0.35),
+            ProcessCPUStat(name: "Node", fraction: 0.15)
+        ]
+        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: processes)]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.stats.count == 2)
+        #expect(viewModel.detailModel.stats[0].label == "Chrome")
+        #expect(viewModel.detailModel.stats[0].value == "35.0%")
+        #expect(viewModel.detailModel.stats[1].label == "Node")
+        #expect(viewModel.detailModel.stats[1].value == "15.0%")
+    }
+
+    @Test func detailModel_hasCorrectMetadata() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        monitor.snapshots = [CPUSnapshot(usage: 0.6)]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.detailModel.title == "CPU")
+        #expect(viewModel.detailModel.systemImage == "cpu")
+        #expect(viewModel.detailModel.primaryValue == "60.0%")
+    }
+
+    @Test func processPercentLabel_formatsCorrectly() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let process = ProcessCPUStat(name: "TestApp", fraction: 0.123)
+        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [process])]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.topProcesses[0].percentLabel == "12.3%")
+    }
+
+    @Test func emptyProcessName_isHandled() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [ProcessCPUStat(name: "", fraction: 0.1)])]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        #expect(viewModel.topProcesses[0].name == "")
+        #expect(viewModel.detailModel.stats[0].label == "")
+    }
 }
