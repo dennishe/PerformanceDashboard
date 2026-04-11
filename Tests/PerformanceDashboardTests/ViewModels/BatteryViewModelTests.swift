@@ -193,6 +193,8 @@ struct BatteryViewModelTests {
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
         await waitForAsyncUpdates()
-        #expect(viewModel.detailModel.stats.isEmpty)
+        #expect(viewModel.detailModel.stats.count == 1)
+        #expect(viewModel.detailModel.stats[0].label == "Connected devices")
+        #expect(viewModel.detailModel.stats[0].value == "None reported")
     }
 }

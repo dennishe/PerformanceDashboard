@@ -23,7 +23,6 @@ public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
     public var wifiOn: Bool { wifiSnapshot.on }
     public var bluetoothConnectedCount: Int { bluetoothSnapshot.connectedCount }
     public var bluetoothOn: Bool { bluetoothSnapshot.on }
-    public var bluetoothPeripherals: [PeripheralBattery] { bluetoothSnapshot.peripherals }
     public var gaugeValue: Double? { wifiOn ? wifiRSSI.map(Self.normaliseRSSI) ?? 0 : nil }
     public var signalLabel: String { Self.makeSignalLabel(wifiOn: wifiOn, rssi: wifiRSSI) }
     public var bluetoothLabel: String {
@@ -49,12 +48,12 @@ public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
         super.init(monitor: monitor, batcher: batcher)
     }
 
-    public convenience init(
+    public init(
         wifiMonitor: some MetricMonitorProtocol<WiFiSnapshot>,
         btMonitor: some MetricMonitorProtocol<BluetoothSnapshot>,
         batcher: any UpdateScheduling = DashboardUpdateBatcher.shared
     ) {
-        self.init(
+        super.init(
             monitor: ZipMonitor(left: wifiMonitor, right: btMonitor) { wifi, bluetooth in
                 WirelessSnapshot(wifi: wifi, bluetooth: bluetooth)
             },
@@ -70,6 +69,7 @@ public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
         if didWiFiChange {
             appendHistory(snapshot.wifi.rssi.map(Self.normaliseRSSI) ?? 0)
         }
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -77,6 +77,7 @@ public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
             title: "Wireless",
             value: signalLabel,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: gaugeValue == nil ? .inactive : .wireless,
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: bluetoothLabel,
@@ -100,13 +101,7 @@ public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
         if let ssid = wifiSSID { stats.append(.init(label: "Network", value: ssid)) }
         if let rssi = wifiRSSI { stats.append(.init(label: "Signal", value: "\(rssi) dBm")) }
         if bluetoothOn {
-            if bluetoothPeripherals.isEmpty {
-                stats.append(.init(label: "Bluetooth", value: "\(bluetoothConnectedCount) connected"))
-            } else {
-                for peripheral in bluetoothPeripherals {
-                    stats.append(.init(label: peripheral.name, value: "\(peripheral.percent)%"))
-                }
-            }
+            stats.append(.init(label: "Bluetooth", value: "\(bluetoothConnectedCount) connected"))
         }
         return DetailModel(
             title: "Wireless",

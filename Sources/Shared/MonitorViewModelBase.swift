@@ -14,6 +14,7 @@ open class MonitorViewModelBase<Snapshot: MetricSnapshot> {
 
     /// Up to 900 samples for the 15-minute detail chart.
     public private(set) var extendedHistory: [Double] = []
+    private var storedTileModel: MetricTileModel?
 
     private var monitorTask: Task<Void, Never>?
     private let _monitor: any MetricMonitorProtocol<Snapshot>
@@ -45,7 +46,7 @@ open class MonitorViewModelBase<Snapshot: MetricSnapshot> {
     }
 
     public var tileModel: MetricTileModel {
-        makeTileModel()
+        storedTileModel ?? makeTileModel()
     }
 
     /// Override to update the subclass's observable properties from fresh snapshot data.
@@ -55,6 +56,10 @@ open class MonitorViewModelBase<Snapshot: MetricSnapshot> {
 
     open func makeTileModel() -> MetricTileModel {
         preconditionFailure("\(type(of: self)) must override makeTileModel()")
+    }
+
+    func refreshTileModel() {
+        storedTileModel = makeTileModel()
     }
 
     /// Appends `value` to both the sparkline history and the extended detail history.

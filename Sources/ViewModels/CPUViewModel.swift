@@ -15,6 +15,7 @@ public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
     override public func receive(_ snapshot: CPUSnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.usage)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -22,6 +23,7 @@ public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
             title: "CPU",
             value: usageLabel,
             gaugeValue: usage,
+            gaugeColorProfile: .standard,
             history: history,
             thresholdLevel: MetricThresholds.cpu.level(for: usage),
             systemImage: "cpu"

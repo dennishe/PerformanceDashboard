@@ -20,6 +20,7 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
         lastSnapshot = snapshot
         let fraction = fans.map(\.fraction).max() ?? 0
         appendHistory(fraction)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -28,6 +29,7 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
             title: "Fans",
             value: primaryLabel,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: gaugeValue == nil ? .inactive : .relaxed,
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: subtitle,

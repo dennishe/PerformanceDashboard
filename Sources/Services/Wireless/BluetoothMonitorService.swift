@@ -14,13 +14,10 @@ public struct BluetoothSnapshot: MetricSnapshot {
     public let connectedCount: Int
     /// `true` while Bluetooth is powered on.
     public let on: Bool
-    /// Battery levels for HID peripherals reporting via IOKit.
-    public let peripherals: [PeripheralBattery]
 
-    public init(connectedCount: Int, on: Bool, peripherals: [PeripheralBattery] = []) {
+    public init(connectedCount: Int, on: Bool) {
         self.connectedCount = connectedCount
         self.on = on
-        self.peripherals = peripherals
     }
 }
 
@@ -30,8 +27,7 @@ public final class BluetoothMonitorService: PollingMonitorBase<BluetoothSnapshot
     @MonitorActor
     override public func sample() async -> BluetoothSnapshot? {
         let (count, on) = await sampleStateOnMain()
-        let peripherals = BluetoothMonitorService.samplePeripheralBatteries()
-        return BluetoothSnapshot(connectedCount: count, on: on, peripherals: peripherals)
+        return BluetoothSnapshot(connectedCount: count, on: on)
     }
 
     private func sampleStateOnMain() async -> (connectedCount: Int, on: Bool) {

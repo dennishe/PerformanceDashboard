@@ -16,6 +16,7 @@ public final class AcceleratorViewModel: MonitorViewModelBase<AcceleratorSnapsho
         if let value = snapshot.aneUsage {
             appendHistory(value)
         }
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -23,6 +24,7 @@ public final class AcceleratorViewModel: MonitorViewModelBase<AcceleratorSnapsho
             title: "ANE",
             value: usageLabel,
             gaugeValue: aneUsage,
+            gaugeColorProfile: aneUsage == nil ? .inactive : .standard,
             history: history,
             thresholdLevel: MetricThresholds.accelerator.level(for: aneUsage ?? 0),
             systemImage: "brain"

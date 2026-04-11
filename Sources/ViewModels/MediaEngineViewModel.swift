@@ -34,6 +34,7 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
         if let combined = combinedMilliwatts, combined > adaptiveMax { adaptiveMax = combined }
         let normalized = combinedMilliwatts.map { min(1.0, $0 / adaptiveMax) } ?? 0
         appendHistory(normalized)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -41,6 +42,7 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
             title: "Media Engine",
             value: combinedLabel,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: gaugeValue == nil ? .inactive : .standard,
             history: history,
             thresholdLevel: MetricThresholds.mediaEngine.level(for: gaugeValue ?? 0),
             subtitle: decodeLabel,

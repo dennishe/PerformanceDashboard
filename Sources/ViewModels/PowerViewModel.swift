@@ -21,6 +21,7 @@ public final class PowerViewModel: MonitorViewModelBase<PowerSnapshot> {
         if let newWatts = snapshot.watts, newWatts > adaptiveMax { adaptiveMax = newWatts }
         let normalized = snapshot.watts.map { min(1.0, $0 / adaptiveMax) } ?? 0
         appendHistory(normalized)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -28,6 +29,7 @@ public final class PowerViewModel: MonitorViewModelBase<PowerSnapshot> {
             title: "Power",
             value: wattsLabel,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: gaugeValue == nil ? .inactive : .standard,
             history: history,
             thresholdLevel: MetricThresholds.power.level(for: gaugeValue ?? 0),
             systemImage: "bolt"

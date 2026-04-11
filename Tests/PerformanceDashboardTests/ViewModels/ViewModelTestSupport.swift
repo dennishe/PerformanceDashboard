@@ -16,3 +16,15 @@ func waitForAsyncUpdates(cycles: Int = 1) async {
         try? await Task.sleep(for: .milliseconds(50))
     }
 }
+
+actor MockPeripheralBatteryProvider: PeripheralBatteryProviding {
+    private let batteries: [PeripheralBattery]
+
+    init(batteries: [PeripheralBattery] = []) {
+        self.batteries = batteries
+    }
+
+    func peripheralBatteries() async -> [PeripheralBattery] {
+        batteries
+    }
+}

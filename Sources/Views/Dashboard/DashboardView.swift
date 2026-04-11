@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-private enum DashboardDetailSelection {
+private enum DashboardDetailSelection: Hashable {
     case cpu
     case gpu
     case memory
@@ -33,6 +33,10 @@ struct DashboardView: View {
             if isDetailOpen { detailOverlay }
         }
         .animation(DashboardDesign.Animation.detailReveal, value: isDetailOpen)
+        .task(id: detailSelection) {
+            guard detailSelection == .battery else { return }
+            await services.battery.refreshConnectedDeviceBatteries()
+        }
     }
 
     // MARK: - Tile grid
@@ -44,54 +48,78 @@ struct DashboardView: View {
             onContentHeightChange: updateContentHeight
         ) {
             if settings.isVisible(.cpu) {
-                MetricTileView(model: services.cpu.tileModel)
-                    .tileButton { detailSelection = .cpu }
+                ObservedMetricTileButton(
+                    modelProvider: { services.cpu.tileModel },
+                    action: { detailSelection = .cpu }
+                )
             }
             if settings.isVisible(.gpu) {
-                MetricTileView(model: services.gpu.tileModel)
-                    .tileButton { detailSelection = .gpu }
+                ObservedMetricTileButton(
+                    modelProvider: { services.gpu.tileModel },
+                    action: { detailSelection = .gpu }
+                )
             }
             if settings.isVisible(.memory) {
-                MetricTileView(model: services.memory.tileModel)
-                    .tileButton { detailSelection = .memory }
+                ObservedMetricTileButton(
+                    modelProvider: { services.memory.tileModel },
+                    action: { detailSelection = .memory }
+                )
             }
             if settings.isVisible(.network) {
-                NetworkTileView(viewModel: services.network)
-                    .tileButton { detailSelection = .network }
+                ObservedNetworkTileButton(
+                    viewModel: services.network,
+                    action: { detailSelection = .network }
+                )
             }
             if settings.isVisible(.disk) {
-                MetricTileView(model: services.disk.tileModel)
-                    .tileButton { detailSelection = .disk }
+                ObservedMetricTileButton(
+                    modelProvider: { services.disk.tileModel },
+                    action: { detailSelection = .disk }
+                )
             }
             #if arch(arm64)
             if settings.isVisible(.ane) {
-                MetricTileView(model: services.accelerator.tileModel)
-                    .tileButton { detailSelection = .ane }
+                ObservedMetricTileButton(
+                    modelProvider: { services.accelerator.tileModel },
+                    action: { detailSelection = .ane }
+                )
             }
             if settings.isVisible(.mediaEngine) {
-                MetricTileView(model: services.mediaEngine.tileModel)
-                    .tileButton { detailSelection = .mediaEngine }
+                ObservedMetricTileButton(
+                    modelProvider: { services.mediaEngine.tileModel },
+                    action: { detailSelection = .mediaEngine }
+                )
             }
             #endif
             if settings.isVisible(.power) {
-                MetricTileView(model: services.power.tileModel)
-                    .tileButton { detailSelection = .power }
+                ObservedMetricTileButton(
+                    modelProvider: { services.power.tileModel },
+                    action: { detailSelection = .power }
+                )
             }
             if settings.isVisible(.thermal) {
-                MetricTileView(model: services.thermal.tileModel)
-                    .tileButton { detailSelection = .thermal }
+                ObservedMetricTileButton(
+                    modelProvider: { services.thermal.tileModel },
+                    action: { detailSelection = .thermal }
+                )
             }
             if settings.isVisible(.fan) {
-                MetricTileView(model: services.fan.tileModel)
-                    .tileButton { detailSelection = .fan }
+                ObservedMetricTileButton(
+                    modelProvider: { services.fan.tileModel },
+                    action: { detailSelection = .fan }
+                )
             }
             if settings.isVisible(.battery) {
-                MetricTileView(model: services.battery.tileModel)
-                    .tileButton { detailSelection = .battery }
+                ObservedMetricTileButton(
+                    modelProvider: { services.battery.tileModel },
+                    action: { detailSelection = .battery }
+                )
             }
             if settings.isVisible(.wireless) {
-                MetricTileView(model: services.wireless.tileModel)
-                    .tileButton { detailSelection = .wireless }
+                ObservedMetricTileButton(
+                    modelProvider: { services.wireless.tileModel },
+                    action: { detailSelection = .wireless }
+                )
             }
         }
         .background(Color.dashboardBackground.ignoresSafeArea())

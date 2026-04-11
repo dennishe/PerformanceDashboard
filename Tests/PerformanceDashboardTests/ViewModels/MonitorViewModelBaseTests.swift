@@ -13,6 +13,7 @@ struct MonitorViewModelBaseTests {
         override func receive(_ snapshot: TestSnapshot) {
             receivedValues.append(snapshot.value)
             appendHistory(snapshot.value)
+            refreshTileModel()
         }
 
         override func makeTileModel() -> MetricTileModel {

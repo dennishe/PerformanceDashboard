@@ -117,24 +117,40 @@ struct WirelessMonitorServiceTests {
         let _: Sendable = peripheral
     }
 
+    @Test func bluetoothPeripheralProvider_merge_prefersHIDBatteryForSameName() {
+        let merged = BluetoothPeripheralBatteryProvider.merge(
+            hidBatteries: [PeripheralBattery(name: "Magic Keyboard", percent: 88)],
+            runtimeBatteries: [PeripheralBattery(name: "Magic Keyboard", percent: 83)]
+        )
+
+        #expect(merged.count == 1)
+        #expect(merged[0].name == "Magic Keyboard")
+        #expect(merged[0].percent == 88)
+    }
+
+    @Test func bluetoothPeripheralProvider_merge_keepsDistinctRuntimeComponents() {
+        let merged = BluetoothPeripheralBatteryProvider.merge(
+            hidBatteries: [],
+            runtimeBatteries: [
+                PeripheralBattery(name: "AirPods Pro (Left)", percent: 71),
+                PeripheralBattery(name: "AirPods Pro (Right)", percent: 68),
+                PeripheralBattery(name: "AirPods Pro (Case)", percent: 42)
+            ]
+        )
+
+        #expect(merged.count == 3)
+        #expect(merged.contains {
+            $0.name == "AirPods Pro (Left)" && $0.percent == 71
+        })
+        #expect(merged.contains {
+            $0.name == "AirPods Pro (Right)" && $0.percent == 68
+        })
+        #expect(merged.contains {
+            $0.name == "AirPods Pro (Case)" && $0.percent == 42
+        })
+    }
+
     // MARK: - BluetoothSnapshot additional
-
-    @Test func bluetoothSnapshot_withPeripherals() {
-        let peripherals = [
-            PeripheralBattery(name: "Mouse", percent: 80),
-            PeripheralBattery(name: "Keyboard", percent: 60)
-        ]
-        let snapshot = BluetoothSnapshot(connectedCount: 2, on: true, peripherals: peripherals)
-        #expect(snapshot.connectedCount == 2)
-        #expect(snapshot.peripherals.count == 2)
-        #expect(snapshot.peripherals[0].name == "Mouse")
-        #expect(snapshot.peripherals[1].percent == 60)
-    }
-
-    @Test func bluetoothSnapshot_defaultPeripheralsAreEmpty() {
-        let snapshot = BluetoothSnapshot(connectedCount: 1, on: true)
-        #expect(snapshot.peripherals.isEmpty)
-    }
 
     @Test func bluetoothSnapshot_isSendable() {
         let snapshot = BluetoothSnapshot(connectedCount: 0, on: false)

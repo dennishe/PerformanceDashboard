@@ -27,6 +27,7 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
     override public func receive(_ snapshot: ThermalSnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.cpuCelsius.map(Self.normalizedCelsius) ?? 0)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -35,6 +36,7 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
             title: "Temp",
             value: cpuLabel,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: gaugeValue == nil ? .inactive : .thermal,
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: gpuLabel,

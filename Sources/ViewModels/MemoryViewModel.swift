@@ -18,6 +18,7 @@ public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
     override public func receive(_ snapshot: MemorySnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.usage)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -25,6 +26,7 @@ public final class MemoryViewModel: MonitorViewModelBase<MemorySnapshot> {
             title: "Memory",
             value: usageLabel,
             gaugeValue: usage,
+            gaugeColorProfile: .relaxed,
             history: history,
             thresholdLevel: MetricThresholds.memory.level(for: usage),
             subtitle: usedLabel + " / " + totalLabel,

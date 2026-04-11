@@ -7,6 +7,8 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
     static let ceilingBytesPerSecond: Double = 100_000_000
 
     private var lastSnapshot = NetworkSnapshot(bytesInPerSecond: 0, bytesOutPerSecond: 0)
+    private var storedInTileModel: MetricTileModel?
+    private var storedOutTileModel: MetricTileModel?
 
     public private(set) var historyIn: [Double] = Constants.prefilledHistory
     public private(set) var historyOut: [Double] = Constants.prefilledHistory
@@ -20,7 +22,7 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
     public var historyInGauge: [Double] { historyIn.map { min($0 / Self.ceilingBytesPerSecond, 1) } }
     public var historyOutGauge: [Double] { historyOut.map { min($0 / Self.ceilingBytesPerSecond, 1) } }
     public var inTileModel: MetricTileModel {
-        Self.makeDirectionalTileModel(
+        storedInTileModel ?? Self.makeDirectionalTileModel(
             direction: .inbound,
             value: inLabel,
             gaugeValue: inGauge,
@@ -29,7 +31,7 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         )
     }
     public var outTileModel: MetricTileModel {
-        Self.makeDirectionalTileModel(
+        storedOutTileModel ?? Self.makeDirectionalTileModel(
             direction: .outbound,
             value: outLabel,
             gaugeValue: outGauge,
@@ -59,6 +61,8 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         )
         // Base-class history tracks the dominant direction's normalized gauge (combined sparkline).
         appendHistory(max(inGauge, outGauge))
+        refreshDirectionalTileModels()
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -66,6 +70,7 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
             title: "Network",
             value: bytesPerSecondLabel(bytesInPerSecond + bytesOutPerSecond),
             gaugeValue: max(inGauge, outGauge),
+            gaugeColorProfile: .network,
             history: history,
             thresholdLevel: thresholdLevel,
             subtitle: "↓ \(inLabel)  ↑ \(outLabel)",
@@ -103,9 +108,27 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
             title: direction.title,
             value: value,
             gaugeValue: gaugeValue,
+            gaugeColorProfile: .network,
             history: history,
             thresholdLevel: thresholdLevel,
             systemImage: direction.systemImage
+        )
+    }
+
+    private func refreshDirectionalTileModels() {
+        storedInTileModel = Self.makeDirectionalTileModel(
+            direction: .inbound,
+            value: inLabel,
+            gaugeValue: inGauge,
+            history: historyInGauge,
+            thresholdLevel: thresholdLevel
+        )
+        storedOutTileModel = Self.makeDirectionalTileModel(
+            direction: .outbound,
+            value: outLabel,
+            gaugeValue: outGauge,
+            history: historyOutGauge,
+            thresholdLevel: thresholdLevel
         )
     }
 

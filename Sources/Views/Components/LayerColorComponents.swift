@@ -12,6 +12,13 @@ struct LayerColorComponents: Hashable {
     static let inactive = LayerColorComponents(nsColor: .secondaryLabelColor)
     static let blue = LayerColorComponents(nsColor: .systemBlue)
 
+    init(red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+        self.alpha = alpha
+    }
+
     init(nsColor: NSColor) {
         let converted = nsColor.usingColorSpace(.deviceRGB)
             ?? nsColor.usingColorSpace(.extendedSRGB)
@@ -29,6 +36,11 @@ struct LayerColorComponents: Hashable {
             colorSpace: CGColorSpaceCreateDeviceRGB(),
             components: [red, green, blue, finalAlpha]
         ) ?? NSColor(deviceRed: red, green: green, blue: blue, alpha: finalAlpha).cgColor
+    }
+
+    func nsColor(alphaMultiplier: CGFloat = 1) -> NSColor {
+        let finalAlpha = min(max(alpha * alphaMultiplier, 0), 1)
+        return NSColor(deviceRed: red, green: green, blue: blue, alpha: finalAlpha)
     }
 
     static func threshold(_ level: ThresholdLevel) -> LayerColorComponents {

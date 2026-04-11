@@ -18,6 +18,7 @@ public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
     override public func receive(_ snapshot: DiskSnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.usage)
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -25,6 +26,7 @@ public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
             title: "Disk",
             value: usageLabel,
             gaugeValue: usage,
+            gaugeColorProfile: .disk,
             history: history,
             thresholdLevel: MetricThresholds.disk.level(for: usage),
             subtitle: availableLabel + " free",

@@ -116,4 +116,15 @@ struct WirelessViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
+
+    @Test func detailModel_keepsBluetoothSummary_withoutPeripheralBatteryRows() async {
+        let viewModel = makeViewModel(ssid: "Net", rssi: -58, wifiOn: true, btCount: 2, btOn: true)
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.detailModel.stats.contains {
+            $0.label == "Bluetooth" && $0.value == "2 connected"
+        })
+        #expect(!viewModel.detailModel.stats.contains { $0.value.hasSuffix("%") })
+    }
 }

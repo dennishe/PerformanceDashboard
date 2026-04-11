@@ -16,6 +16,7 @@ public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
         if let value = snapshot.usage {
             appendHistory(value)
         }
+        refreshTileModel()
     }
 
     override public func makeTileModel() -> MetricTileModel {
@@ -23,6 +24,7 @@ public final class GPUViewModel: MonitorViewModelBase<GPUSnapshot> {
             title: "GPU",
             value: usageLabel,
             gaugeValue: usage,
+            gaugeColorProfile: usage == nil ? .inactive : .standard,
             history: history,
             thresholdLevel: MetricThresholds.gpu.level(for: usage ?? 0),
             unavailableReason: usage == nil ? "GPU stats unavailable" : nil,

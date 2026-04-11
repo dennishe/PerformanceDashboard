@@ -28,8 +28,7 @@ struct MetricSnapshotConformanceTests {
             WiFiSnapshot(ssid: "TestNet", rssi: -55, on: true),
             BluetoothSnapshot(
                 connectedCount: 2,
-                on: true,
-                peripherals: [PeripheralBattery(name: "Mouse", percent: 90)]
+                on: true
             )
         ]
 
