@@ -3,9 +3,15 @@ import Darwin
 /// Per-process CPU usage from the last poll interval.
 public struct ProcessCPUStat: Sendable, Equatable {
     public let name: String
-    /// Fraction of one core [0, 1].
+    /// Fraction of one fully utilized core for the sampled interval.
+    /// Values can exceed 1.0 when a process saturates multiple cores.
     public let fraction: Double
     public var percentLabel: String { fraction.percentFormatted() }
+}
+
+private struct ProcessSampleBaseline {
+    let pidTicks: [Int32: UInt64]
+    let uptimeNanoseconds: UInt64
 }
 
 /// Snapshot of overall CPU utilisation at a point in time.
@@ -24,14 +30,24 @@ public struct CPUSnapshot: MetricSnapshot {
 /// Monitors CPU utilisation by computing deltas between `host_processor_info` samples.
 public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     @MonitorActor private var previousLoadInfo: [processor_cpu_load_info] = []
-    @MonitorActor private var previousPidTicks: [Int32: UInt64] = [:]
+    @MonitorActor private var previousProcessSample: ProcessSampleBaseline?
 
     @MonitorActor
     override public func sample() async -> CPUSnapshot? {
         let (current, usage) = CPUMonitorService.sample(previous: previousLoadInfo)
-        let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(previous: previousPidTicks)
+        let currentUptimeNanoseconds = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        let elapsedNanoseconds = previousProcessSample.map {
+            currentUptimeNanoseconds &- $0.uptimeNanoseconds
+        }
+        let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(
+            previous: previousProcessSample?.pidTicks ?? [:],
+            elapsedNanoseconds: elapsedNanoseconds
+        )
         previousLoadInfo = current
-        previousPidTicks = newPidTicks
+        previousProcessSample = ProcessSampleBaseline(
+            pidTicks: newPidTicks,
+            uptimeNanoseconds: currentUptimeNanoseconds
+        )
         return CPUSnapshot(usage: usage, topProcesses: topProcesses)
     }
 
@@ -105,7 +121,8 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
 
     /// Samples per-process CPU nanoseconds and returns the top 5 consumers.
     nonisolated static func sampleProcesses(
-        previous: [Int32: UInt64]
+        previous: [Int32: UInt64],
+        elapsedNanoseconds: UInt64?
     ) -> ([Int32: UInt64], [ProcessCPUStat]) {
         let pidCount = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
         guard pidCount > 0 else { return ([:], []) }
@@ -113,7 +130,7 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
         proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, pidCount * Int32(MemoryLayout<Int32>.size))
 
         var current: [Int32: UInt64] = [:]
-        var deltas: [(name: String, delta: UInt64)] = []
+        var deltas: [(name: String, fraction: Double)] = []
         let taskSize = Int32(MemoryLayout<proc_taskinfo>.size)
 
         for pid in pids where pid > 0 {
@@ -121,19 +138,40 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
             guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, taskSize) > 0 else { continue }
             let ticks = info.pti_total_user + info.pti_total_system
             current[pid] = ticks
-            if let prev = previous[pid], ticks > prev {
+            if let prev = previous[pid], ticks > prev,
+               let elapsedNanoseconds,
+               elapsedNanoseconds > 0 {
                 var buf = [CChar](repeating: 0, count: 64)
                 proc_name(pid, &buf, UInt32(buf.count))
                 let nameBytes = buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
                 let name = String(bytes: nameBytes, encoding: .utf8) ?? ""
-                deltas.append((name.isEmpty ? "pid \(pid)" : name, ticks - prev))
+                deltas.append((
+                    name.isEmpty ? "pid \(pid)" : name,
+                    processFraction(deltaTaskTicks: ticks - prev, elapsedNanoseconds: elapsedNanoseconds)
+                ))
             }
         }
 
-        // pti_total_user/system are in nanoseconds; 1s polling interval = 1_000_000_000 ns.
-        let top = deltas.sorted { $0.delta > $1.delta }.prefix(5).map {
-            ProcessCPUStat(name: $0.name, fraction: min(1.0, Double($0.delta) / 1_000_000_000))
+        let top = deltas.sorted { $0.fraction > $1.fraction }.prefix(5).map {
+            ProcessCPUStat(name: $0.name, fraction: $0.fraction)
         }
         return (current, Array(top))
     }
+
+    nonisolated static func processFraction(
+        deltaTaskTicks: UInt64,
+        elapsedNanoseconds: UInt64,
+        timebaseNumerator: UInt32 = taskTimebaseInfo.numer,
+        timebaseDenominator: UInt32 = taskTimebaseInfo.denom
+    ) -> Double {
+        guard elapsedNanoseconds > 0, timebaseDenominator > 0 else { return 0 }
+        let cpuNanoseconds = Double(deltaTaskTicks) * Double(timebaseNumerator) / Double(timebaseDenominator)
+        return cpuNanoseconds / Double(elapsedNanoseconds)
+    }
+
+    nonisolated private static let taskTimebaseInfo: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
 }

@@ -68,6 +68,39 @@ struct CPUMonitorServiceTests {
         #expect(usage <= 1)
     }
 
+    @Test func processFraction_convertsMachTicks_usingTimebase() {
+        let fraction = CPUMonitorService.processFraction(
+            deltaTaskTicks: 24_000_000,
+            elapsedNanoseconds: 1_000_000_000,
+            timebaseNumerator: 125,
+            timebaseDenominator: 3
+        )
+
+        #expect(abs(fraction - 1.0) < 0.001)
+    }
+
+    @Test func processFraction_canExceedOne_forMultiCoreProcesses() {
+        let fraction = CPUMonitorService.processFraction(
+            deltaTaskTicks: 48_000_000,
+            elapsedNanoseconds: 1_000_000_000,
+            timebaseNumerator: 125,
+            timebaseDenominator: 3
+        )
+
+        #expect(abs(fraction - 2.0) < 0.001)
+    }
+
+    @Test func processFraction_returnsZero_whenElapsedIsZero() {
+        let fraction = CPUMonitorService.processFraction(
+            deltaTaskTicks: 1_000,
+            elapsedNanoseconds: 0,
+            timebaseNumerator: 1,
+            timebaseDenominator: 1
+        )
+
+        #expect(fraction == 0)
+    }
+
     // MARK: - Snapshot struct
 
     @Test func cpuSnapshot_storesUsage() {
@@ -108,6 +141,11 @@ struct CPUMonitorServiceTests {
     @Test func processCPUStat_percentLabel_formats100Percent() {
         let stat = ProcessCPUStat(name: "test", fraction: 1.0)
         #expect(stat.percentLabel == "100.0%")
+    }
+
+    @Test func processCPUStat_percentLabel_formatsAbove100Percent() {
+        let stat = ProcessCPUStat(name: "test", fraction: 1.5)
+        #expect(stat.percentLabel == "150.0%")
     }
 
     @Test func processCPUStat_percentLabel_formatsZero() {
