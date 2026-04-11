@@ -116,18 +116,34 @@ struct CPUViewModelTests {
     @Test func detailModel_mapsProcessesToStats() async {
         let monitor = MockMonitor<CPUSnapshot>()
         let processes = [
-            ProcessCPUStat(name: "Chrome", fraction: 0.35),
-            ProcessCPUStat(name: "Node", fraction: 0.15)
+            ProcessCPUStat(name: "Chrome", fraction: 0.4),
+            ProcessCPUStat(name: "Node", fraction: 0.2)
         ]
-        monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: processes)]
-        let viewModel = CPUViewModel(monitor: monitor)
+        monitor.snapshots = [CPUSnapshot(usage: 0.2, topProcesses: processes)]
+        let viewModel = CPUViewModel(monitor: monitor, processorCount: 4)
         viewModel.start()
         await waitForAsyncUpdates()
-        #expect(viewModel.detailModel.stats.count == 2)
+        #expect(viewModel.detailModel.stats.count == 3)
         #expect(viewModel.detailModel.stats[0].label == "Chrome")
-        #expect(viewModel.detailModel.stats[0].value == "35.0%")
+        #expect(viewModel.detailModel.stats[0].value == "10.0%")
         #expect(viewModel.detailModel.stats[1].label == "Node")
-        #expect(viewModel.detailModel.stats[1].value == "15.0%")
+        #expect(viewModel.detailModel.stats[1].value == "5.0%")
+        #expect(viewModel.detailModel.stats[2].label == "Other / system")
+        #expect(viewModel.detailModel.stats[2].value == "5.0%")
+    }
+
+    @Test func detailModel_omitsRemainder_whenTopProcessesMatchUsage() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let processes = [
+            ProcessCPUStat(name: "Chrome", fraction: 0.4),
+            ProcessCPUStat(name: "Node", fraction: 0.2)
+        ]
+        monitor.snapshots = [CPUSnapshot(usage: 0.15, topProcesses: processes)]
+        let viewModel = CPUViewModel(monitor: monitor, processorCount: 4)
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.detailModel.stats.count == 2)
     }
 
     @Test func detailModel_hasCorrectMetadata() async {
@@ -139,6 +155,24 @@ struct CPUViewModelTests {
         #expect(viewModel.detailModel.title == "CPU")
         #expect(viewModel.detailModel.systemImage == "cpu")
         #expect(viewModel.detailModel.primaryValue == "60.0%")
+    }
+
+    @Test func detailModel_includesPerCoreSupplementarySection() async {
+        let monitor = MockMonitor<CPUSnapshot>()
+        let cores = [
+            CPUCoreStat(index: 0, usage: 0.72, kind: "Performance"),
+            CPUCoreStat(index: 1, usage: 0.18, kind: "Efficiency")
+        ]
+        monitor.snapshots = [CPUSnapshot(usage: 0.6, cores: cores)]
+        let viewModel = CPUViewModel(monitor: monitor)
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.detailModel.supplementarySections.count == 1)
+        #expect(viewModel.detailModel.supplementarySections[0].title == "Per-core")
+        #expect(viewModel.detailModel.supplementarySections[0].items[0].label == "CPU 1")
+        #expect(viewModel.detailModel.supplementarySections[0].items[0].subtitle == "Performance")
+        #expect(viewModel.detailModel.supplementarySections[0].items[0].value == "72.0%")
     }
 
     @Test func processPercentLabel_formatsCorrectly() async {

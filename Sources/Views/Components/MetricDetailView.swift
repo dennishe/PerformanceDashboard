@@ -4,6 +4,7 @@ import SwiftUI
 /// selectable range and per-metric secondary stats. Presented in-page (not a sheet).
 struct MetricDetailView: View {
     let model: DetailModel
+    let availableHeight: CGFloat?
     let onDismiss: () -> Void
     @State private var selectedRange: TimeRange = .oneMinute
 
@@ -11,6 +12,9 @@ struct MetricDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow(model: model)
             chartSection(model: model)
+            if showsSupplementarySections {
+                supplementarySections(model.supplementarySections)
+            }
             if !model.stats.isEmpty {
                 statsSection(stats: model.stats)
             }
@@ -30,6 +34,20 @@ struct MetricDetailView: View {
             .padding(.top, DashboardDesign.Spacing.compact)
             .padding(.trailing, DashboardDesign.Spacing.regular)
         }
+    }
+
+    private var showsSupplementarySections: Bool {
+        guard !model.supplementarySections.isEmpty else { return false }
+        guard let availableHeight else { return true }
+        return availableHeight >= estimatedRequiredHeight
+    }
+
+    private var estimatedRequiredHeight: CGFloat {
+        let statHeight = CGFloat(model.stats.count) * 40
+        let supplementaryItemCount = model.supplementarySections.reduce(0) { $0 + $1.items.count }
+        let supplementaryRows = CGFloat((supplementaryItemCount + 1) / 2)
+        let supplementaryHeight = supplementaryRows > 0 ? 72 + supplementaryRows * 58 : 0
+        return 270 + statHeight + supplementaryHeight
     }
 
     // MARK: - Header (single compact bar, close button lives in body overlay)
@@ -82,6 +100,14 @@ struct MetricDetailView: View {
         .padding(.horizontal, DashboardDesign.Spacing.large)
         .padding(.top, DashboardDesign.Spacing.medium)
         .padding(.bottom, DashboardDesign.Spacing.regular)
+    }
+
+    private func supplementarySections(_ sections: [DetailModel.SupplementarySection]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(sections) { section in
+                DetailSupplementarySectionView(section: section)
+            }
+        }
     }
 
     // MARK: - Stats
@@ -143,10 +169,17 @@ private enum TimeRange: CaseIterable {
             primaryValue: "42.3%",
             thresholdLevel: .normal,
             history: (0..<60).map { _ in Double.random(in: 0...0.5) },
+            supplementarySections: [
+                .init(title: "Per-core", items: [
+                    .init(label: "CPU 1", subtitle: "Performance", value: "72.0%", gaugeValue: 0.72),
+                    .init(label: "CPU 2", subtitle: "Efficiency", value: "18.0%", gaugeValue: 0.18)
+                ])
+            ],
             stats: [
                 .init(label: "Usage", value: "42.3%")
             ]
         ),
+        availableHeight: 720,
         onDismiss: {}
     )
         .frame(width: 480)

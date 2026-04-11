@@ -136,14 +136,22 @@ struct DashboardView: View {
     // MARK: - Detail overlay
 
     @ViewBuilder private var detailOverlay: some View {
-        Color.black.opacity(DashboardDesign.Opacity.modalScrim)
-            .ignoresSafeArea()
-            .onTapGesture { closeDetail() }
-        if let detailModel {
-            MetricDetailView(model: detailModel, onDismiss: closeDetail)
-                .frame(minWidth: 420, maxWidth: 560)
-                .padding(44)
-                .transition(.scale(scale: 0.94, anchor: .center).combined(with: .opacity))
+        GeometryReader { proxy in
+            ZStack {
+                Color.black.opacity(DashboardDesign.Opacity.modalScrim)
+                    .ignoresSafeArea()
+                    .onTapGesture { closeDetail() }
+                if let detailModel {
+                    MetricDetailView(
+                        model: detailModel,
+                        availableHeight: max(0, proxy.size.height - 88),
+                        onDismiss: closeDetail
+                    )
+                    .frame(minWidth: 420, maxWidth: 560)
+                    .padding(44)
+                    .transition(.scale(scale: 0.94, anchor: .center).combined(with: .opacity))
+                }
+            }
         }
     }
 

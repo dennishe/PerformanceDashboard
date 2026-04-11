@@ -18,11 +18,14 @@ private struct ProcessSampleBaseline {
 public struct CPUSnapshot: MetricSnapshot {
     /// Overall usage as a fraction in [0, 1].
     public let usage: Double
+    /// Per-core usage as a fraction in [0, 1].
+    public let cores: [CPUCoreStat]
     /// Top processes by CPU usage, sorted descending. Empty on the first tick.
     public let topProcesses: [ProcessCPUStat]
 
-    public init(usage: Double, topProcesses: [ProcessCPUStat] = []) {
+    public init(usage: Double, cores: [CPUCoreStat] = [], topProcesses: [ProcessCPUStat] = []) {
         self.usage = usage
+        self.cores = cores
         self.topProcesses = topProcesses
     }
 }
@@ -31,10 +34,11 @@ public struct CPUSnapshot: MetricSnapshot {
 public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     @MonitorActor private var previousLoadInfo: [processor_cpu_load_info] = []
     @MonitorActor private var previousProcessSample: ProcessSampleBaseline?
+    nonisolated static let coreTopology = CPUCoreTopology.current
 
     @MonitorActor
     override public func sample() async -> CPUSnapshot? {
-        let (current, usage) = CPUMonitorService.sample(previous: previousLoadInfo)
+        let sample = CPUMonitorService.sample(previous: previousLoadInfo)
         let currentUptimeNanoseconds = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
         let elapsedNanoseconds = previousProcessSample.map {
             currentUptimeNanoseconds &- $0.uptimeNanoseconds
@@ -43,42 +47,15 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
             previous: previousProcessSample?.pidTicks ?? [:],
             elapsedNanoseconds: elapsedNanoseconds
         )
-        previousLoadInfo = current
+        previousLoadInfo = sample.loadInfo
         previousProcessSample = ProcessSampleBaseline(
             pidTicks: newPidTicks,
             uptimeNanoseconds: currentUptimeNanoseconds
         )
-        return CPUSnapshot(usage: usage, topProcesses: topProcesses)
+        return CPUSnapshot(usage: sample.usage, cores: sample.cores, topProcesses: topProcesses)
     }
 
     // MARK: - Private sampling
-
-    /// Returns the current per-core tick array and the computed usage delta.
-    nonisolated static func sample(
-        previous: [processor_cpu_load_info]
-    ) -> ([processor_cpu_load_info], Double) {
-        var cpuInfo: processor_info_array_t?
-        var cpuInfoCount = mach_msg_type_number_t()
-        var processorCount = natural_t()
-
-        let result = host_processor_info(
-            mach_host_self(),
-            PROCESSOR_CPU_LOAD_INFO,
-            &processorCount,
-            &cpuInfo,
-            &cpuInfoCount
-        )
-        guard result == KERN_SUCCESS, let info = cpuInfo else { return (previous, 0) }
-        defer {
-            vm_deallocate(mach_task_self_, vm_address_t(bitPattern: info), vm_size_t(cpuInfoCount))
-        }
-
-        let current = loadInfoArray(from: info, processorCount: Int(processorCount))
-        guard !previous.isEmpty, previous.count == current.count else {
-            return (current, 0)
-        }
-        return (current, computeUsage(current: current, previous: previous))
-    }
 
     nonisolated static func loadInfoArray(
         from info: processor_info_array_t,

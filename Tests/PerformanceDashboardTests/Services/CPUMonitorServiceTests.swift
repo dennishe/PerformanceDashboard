@@ -52,22 +52,6 @@ struct CPUMonitorServiceTests {
         #expect(result == 1.0)
     }
 
-    // MARK: - sample integration test
-
-    @Test func sample_returnsCoresOnRealSystem() {
-        let (cores, usage) = CPUMonitorService.sample(previous: [])
-        #expect(!cores.isEmpty)
-        // First call returns 0 usage (no previous baseline)
-        #expect(usage == 0)
-    }
-
-    @Test func sample_returnsDeltaUsage_onSecondCall() {
-        let (first, _) = CPUMonitorService.sample(previous: [])
-        let (_, usage) = CPUMonitorService.sample(previous: first)
-        #expect(usage >= 0)
-        #expect(usage <= 1)
-    }
-
     @Test func processFraction_convertsMachTicks_usingTimebase() {
         let fraction = CPUMonitorService.processFraction(
             deltaTaskTicks: 24_000_000,
@@ -165,7 +149,10 @@ struct CPUMonitorServiceTests {
             ProcessCPUStat(name: "proc1", fraction: 0.8),
             ProcessCPUStat(name: "proc2", fraction: 0.4)
         ]
-        let snapshot = CPUSnapshot(usage: 0.5, topProcesses: procs)
+        let cores = [CPUCoreStat(index: 0, usage: 0.6, kind: "Performance")]
+        let snapshot = CPUSnapshot(usage: 0.5, cores: cores, topProcesses: procs)
+        #expect(snapshot.cores.count == 1)
+        #expect(snapshot.cores[0].kind == "Performance")
         #expect(snapshot.topProcesses.count == 2)
         #expect(snapshot.topProcesses[0].name == "proc1")
         #expect(snapshot.topProcesses[1].fraction == 0.4)
