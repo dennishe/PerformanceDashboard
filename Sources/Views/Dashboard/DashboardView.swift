@@ -110,8 +110,8 @@ struct DashboardView: View {
                 )
             }
             if settings.isVisible(.battery) {
-                ObservedMetricTileButton(
-                    modelProvider: { services.battery.tileModel },
+                ObservedBatteryTileButton(
+                    viewModel: services.battery,
                     action: { detailSelection = .battery }
                 )
             }

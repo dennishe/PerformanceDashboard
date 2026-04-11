@@ -22,3 +22,14 @@ struct ObservedNetworkTileButton: View {
             .tileButton(action: action)
     }
 }
+
+@MainActor
+struct ObservedBatteryTileButton: View {
+    let viewModel: BatteryViewModel
+    let action: @MainActor () -> Void
+
+    var body: some View {
+        BatteryTileView(viewModel: viewModel)
+            .tileButton(action: action)
+    }
+}

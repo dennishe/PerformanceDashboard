@@ -39,16 +39,16 @@ public final class ZipMonitor<Left: MetricSnapshot, Right: MetricSnapshot, Merge
             leftTask = Task { [weak self] in
                 guard let self else { return }
                 for await snapshot in leftStream {
-                    await receiveLeft(snapshot)
+                    receiveLeft(snapshot)
                 }
-                await upstreamFinished()
+                upstreamFinished()
             }
             rightTask = Task { [weak self] in
                 guard let self else { return }
                 for await snapshot in rightStream {
-                    await receiveRight(snapshot)
+                    receiveRight(snapshot)
                 }
-                await upstreamFinished()
+                upstreamFinished()
             }
         }
     }

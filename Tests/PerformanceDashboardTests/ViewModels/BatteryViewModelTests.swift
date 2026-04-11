@@ -49,7 +49,7 @@ struct BatteryViewModelTests {
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
         await waitForAsyncUpdates()
-        #expect(viewModel.chargeLabel == "78.0%")
+        #expect(viewModel.chargeLabel == "78%")
     }
 
     @Test func chargeLabel_showsACPower_whenNoBattery() async {

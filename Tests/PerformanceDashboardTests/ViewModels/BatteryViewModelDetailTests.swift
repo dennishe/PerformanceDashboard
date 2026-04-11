@@ -14,7 +14,7 @@ struct BatteryViewModelDetailTests {
         await waitForAsyncUpdates()
 
         let chargeValue = viewModel.detailModel.stats.first { $0.label == "Charge" }?.value
-        #expect(chargeValue == "75.0%")
+        #expect(chargeValue == "75%")
     }
 
     @Test func detailModel_includesConnectedDeviceBatteries_afterRefresh() async {

@@ -46,7 +46,10 @@ struct WindowHeightSizer: NSViewRepresentable {
             // Lock height immediately using the current frame so vertical resize
             // handles are never shown, even before the first layout pass fires.
             let layoutHeight = pendingHeight > 0 ? pendingHeight : window.contentLayoutRect.height
-            let inset = Self.chromeInset(for: window)
+            let inset = Self.chromeInset(
+                frameHeight: window.frame.height,
+                contentLayoutHeight: window.contentLayoutRect.height
+            )
             let lockedHeight = (layoutHeight + inset).rounded(.up)
             window.contentMinSize = NSSize(width: Constants.dashboardMinimumWindowWidth, height: lockedHeight)
             window.contentMaxSize = NSSize(width: .greatestFiniteMagnitude, height: lockedHeight)
@@ -59,7 +62,10 @@ struct WindowHeightSizer: NSViewRepresentable {
 
             lockedContentHeight = contentHeight
 
-            let inset = Self.chromeInset(for: window)
+            let inset = Self.chromeInset(
+                frameHeight: window.frame.height,
+                contentLayoutHeight: window.contentLayoutRect.height
+            )
             let targetContentHeight = (contentHeight + inset).rounded(.up)
             let contentWidth = window.contentRect(forFrameRect: window.frame).width
             let targetContentRect = NSRect(x: 0, y: 0, width: contentWidth, height: targetContentHeight)
@@ -94,24 +100,24 @@ struct WindowHeightSizer: NSViewRepresentable {
         /// Called on every pixel of a live user resize.
         /// Locks the frame height to the last committed content height so the
         /// window height tracks the tile layout rather than user drag.
-        nonisolated func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
-            MainActor.assumeIsolated {
-                guard lockedContentHeight > 0 else { return frameSize }
-                let inset = Self.chromeInset(for: sender)
-                let targetContentHeight = (lockedContentHeight + inset).rounded(.up)
-                let targetContentRect = NSRect(x: 0, y: 0, width: frameSize.width, height: targetContentHeight)
-                let targetFrameHeight = sender.frameRect(forContentRect: targetContentRect).height
-                return NSSize(width: frameSize.width, height: targetFrameHeight)
-            }
+        func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+            guard lockedContentHeight > 0 else { return frameSize }
+            let inset = Self.chromeInset(
+                frameHeight: sender.frame.height,
+                contentLayoutHeight: sender.contentLayoutRect.height
+            )
+            let targetContentHeight = (lockedContentHeight + inset).rounded(.up)
+            let targetContentRect = NSRect(x: 0, y: 0, width: frameSize.width, height: targetContentHeight)
+            let targetFrameHeight = sender.frameRect(forContentRect: targetContentRect).height
+            return NSSize(width: frameSize.width, height: targetFrameHeight)
         }
 
         // MARK: Helpers
 
         /// The fixed vertical chrome — titlebar + any bottom inset — that must be
         /// added to the SwiftUI layout height to get the correct window frame height.
-        /// SwiftUI uses full-size content view, so `contentLayoutRect` is the safe zone.
-        nonisolated private static func chromeInset(for window: NSWindow) -> CGFloat {
-            max(0, window.frame.height - window.contentLayoutRect.height)
+        static func chromeInset(frameHeight: CGFloat, contentLayoutHeight: CGFloat) -> CGFloat {
+            max(0, frameHeight - contentLayoutHeight)
         }
     }
 }

@@ -124,7 +124,8 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
             if let prev = previous[pid], ticks > prev {
                 var buf = [CChar](repeating: 0, count: 64)
                 proc_name(pid, &buf, UInt32(buf.count))
-                let name = String(cString: buf)
+                let nameBytes = buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+                let name = String(bytes: nameBytes, encoding: .utf8) ?? ""
                 deltas.append((name.isEmpty ? "pid \(pid)" : name, ticks - prev))
             }
         }

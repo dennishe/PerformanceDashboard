@@ -28,7 +28,7 @@ enum RingGaugeLayerSupport {
     }
 
     static func currentStrokeEnd(for layer: CAShapeLayer) -> CGFloat {
-        (layer.presentation() as? CAShapeLayer)?.strokeEnd ?? layer.strokeEnd
+        layer.presentation()?.strokeEnd ?? layer.strokeEnd
     }
 
     static func animateStrokeEnd(on layer: CAShapeLayer, from current: CGFloat, to newValue: CGFloat) {

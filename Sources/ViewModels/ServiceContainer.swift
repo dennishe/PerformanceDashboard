@@ -56,7 +56,16 @@ final class ServiceContainer {
             MetricEntry(start: power.start, stop: power.stop),
             MetricEntry(start: fan.start, stop: fan.stop),
             MetricEntry(start: thermal.start, stop: thermal.stop),
-            MetricEntry(start: battery.start, stop: battery.stop),
+            MetricEntry(
+                start: {
+                    battery.start()
+                    battery.startPeripheralBatteryRefreshLoop()
+                },
+                stop: {
+                    battery.stopPeripheralBatteryRefreshLoop()
+                    battery.stop()
+                }
+            ),
             MetricEntry(start: mediaEngine.start, stop: mediaEngine.stop),
             MetricEntry(start: wireless.start, stop: wireless.stop)
         ]

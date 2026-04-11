@@ -5,6 +5,9 @@ enum Constants {
     /// Default polling interval for all monitor services.
     static let pollingInterval: Duration = .seconds(1)
 
+    /// Peripheral battery levels change slowly, so refresh accessory batteries less often.
+    static let peripheralBatteryRefreshInterval: Duration = .seconds(30)
+
     /// Number of historical samples to retain for sparklines.
     static let historySamples: Int = 60
 

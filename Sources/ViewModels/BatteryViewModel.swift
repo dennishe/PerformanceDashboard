@@ -3,7 +3,11 @@ import SwiftUI
 @MainActor
 @Observable
 public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
+    static let maxVisibleTileGaugeRows = 4
+
     private let peripheralBatteryProvider: any PeripheralBatteryProviding
+    private let peripheralRefreshInterval: Duration
+    private var peripheralRefreshTask: Task<Void, Never>?
 
     public private(set) var snapshot = BatterySnapshot(
         isPresent: false, chargeFraction: 0, isCharging: false,
@@ -15,9 +19,11 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
     public init(
         monitor: some MetricMonitorProtocol<BatterySnapshot>,
         batcher: any UpdateScheduling = DashboardUpdateBatcher.shared,
-        peripheralBatteryProvider: any PeripheralBatteryProviding = BluetoothPeripheralBatteryProvider()
+        peripheralBatteryProvider: any PeripheralBatteryProviding = BluetoothPeripheralBatteryProvider(),
+        peripheralRefreshInterval: Duration = .seconds(30)
     ) {
         self.peripheralBatteryProvider = peripheralBatteryProvider
+        self.peripheralRefreshInterval = peripheralRefreshInterval
         super.init(monitor: monitor, batcher: batcher)
     }
 
@@ -48,7 +54,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
             gaugeColorProfile: snapshot.isPresent ? .battery : .inactive,
             history: history,
             thresholdLevel: thresholdLevel,
-            subtitle: statusLabel,
+            subtitle: tileSubtitle,
             unavailableReason: snapshot.isPresent ? nil : "No battery on this Mac",
             systemImage: "battery.100"
         )
@@ -56,10 +62,10 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
 
     private static func makeChargeLabel(from snapshot: BatterySnapshot) -> String {
         guard snapshot.isPresent else { return "AC Power" }
-        return snapshot.chargeFraction.percentFormatted()
+        return "\(Int((snapshot.chargeFraction * 100).rounded()))%"
     }
 
-    private static func makeStatusLabel(from snapshot: BatterySnapshot) -> String? {
+    static func makeStatusLabel(from snapshot: BatterySnapshot) -> String? {
         guard snapshot.isPresent else { return nil }
         if snapshot.isCharging { return "Charging" }
         if snapshot.onAC { return "Charged" }
@@ -71,12 +77,41 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
         return "On battery"
     }
 
+    public func startPeripheralBatteryRefreshLoop() {
+        guard peripheralRefreshTask == nil else { return }
+
+        peripheralRefreshTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                await self.refreshConnectedDeviceBatteries()
+
+                do {
+                    try await Task.sleep(for: self.peripheralRefreshInterval)
+                } catch {
+                    break
+                }
+            }
+        }
+    }
+
+    public func stopPeripheralBatteryRefreshLoop() {
+        peripheralRefreshTask?.cancel()
+        peripheralRefreshTask = nil
+    }
+
     public func refreshConnectedDeviceBatteries() async {
         guard !isLoadingConnectedDeviceBatteries else { return }
         isLoadingConnectedDeviceBatteries = true
+        refreshTileModel()
+        defer {
+            isLoadingConnectedDeviceBatteries = false
+            refreshTileModel()
+        }
+
         let batteries = await peripheralBatteryProvider.peripheralBatteries()
         connectedDeviceBatteries = Self.disambiguatedDeviceBatteries(from: batteries)
-        isLoadingConnectedDeviceBatteries = false
+        refreshTileModel()
     }
 
     public var detailModel: DetailModel {
@@ -116,7 +151,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
         )
     }
 
-    private static func disambiguatedDeviceBatteries(
+    static func disambiguatedDeviceBatteries(
         from batteries: [PeripheralBattery]
     ) -> [PeripheralBattery] {
         let sorted = batteries.sorted {

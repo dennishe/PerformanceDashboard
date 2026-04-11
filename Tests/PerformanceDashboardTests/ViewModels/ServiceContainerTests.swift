@@ -29,6 +29,7 @@ struct ServiceContainerTests {
             cycleCount: 10,
             healthFraction: 0.95
         )])
+        let peripheralBatteryProvider = MockPeripheralBatteryProvider(batteries: [])
         let mediaEngineMonitor = MockMonitor(
             snapshots: [MediaEngineSnapshot(encodeMilliwatts: 10, decodeMilliwatts: 5)]
         )
@@ -48,7 +49,12 @@ struct ServiceContainerTests {
                 power: PowerViewModel(monitor: powerMonitor, batcher: batcher),
                 fan: FanViewModel(monitor: fanMonitor, batcher: batcher),
                 thermal: ThermalViewModel(monitor: thermalMonitor, batcher: batcher),
-                battery: BatteryViewModel(monitor: batteryMonitor, batcher: batcher),
+                battery: BatteryViewModel(
+                    monitor: batteryMonitor,
+                    batcher: batcher,
+                    peripheralBatteryProvider: peripheralBatteryProvider,
+                    peripheralRefreshInterval: .seconds(3_600)
+                ),
                 mediaEngine: MediaEngineViewModel(monitor: mediaEngineMonitor, batcher: batcher),
                 wireless: WirelessViewModel(
                     wifiMonitor: wifiMonitor,

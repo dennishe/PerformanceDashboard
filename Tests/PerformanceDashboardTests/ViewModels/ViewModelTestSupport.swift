@@ -19,12 +19,18 @@ func waitForAsyncUpdates(cycles: Int = 1) async {
 
 actor MockPeripheralBatteryProvider: PeripheralBatteryProviding {
     private let batteries: [PeripheralBattery]
+    private var callCount = 0
 
     init(batteries: [PeripheralBattery] = []) {
         self.batteries = batteries
     }
 
     func peripheralBatteries() async -> [PeripheralBattery] {
-        batteries
+        callCount += 1
+        return batteries
+    }
+
+    func recordedCallCount() -> Int {
+        callCount
     }
 }
