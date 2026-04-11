@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 @Observable
 public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
-    private var lastSnapshot = ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil)
+    private var lastSnapshot = ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil, sensorReadings: [])
 
     public private(set) var tileModel = MetricTileModel(
         title: "Temp",
@@ -67,9 +67,9 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
     }
 
     public var detailModel: DetailModel {
-        var stats: [DetailModel.Stat] = []
-        if let cpu = cpuCelsius { stats.append(.init(label: "CPU", value: cpu.celsiusFormatted())) }
-        if let gpu = gpuCelsius { stats.append(.init(label: "GPU", value: gpu.celsiusFormatted())) }
+        let stats = lastSnapshot.sensorReadings.map {
+            DetailModel.Stat(label: $0.label, value: $0.celsius.celsiusFormatted())
+        }
         return DetailModel(
             title: "Temperature",
             systemImage: "thermometer.medium",

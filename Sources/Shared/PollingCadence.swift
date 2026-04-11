@@ -9,7 +9,11 @@ enum PollingCadence {
     }
 
     static func nextDeadline(after deadline: ContinuousClock.Instant) -> ContinuousClock.Instant {
-        deadline.advanced(by: Constants.pollingInterval)
+        let scheduled = deadline.advanced(by: Constants.pollingInterval)
+        // If the scheduled time is in the past (e.g. after wake from sleep), clamp to now.
+        // Without this, every poll that fell asleep during system sleep would return
+        // immediately — causing a burst of hundreds of back-to-back samples on wake.
+        return scheduled > clock.now ? scheduled : clock.now
     }
 
     static func sleep(until deadline: ContinuousClock.Instant) async throws {

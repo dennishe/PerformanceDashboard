@@ -16,6 +16,8 @@ final class PMPSampler {
     private var ref: IOReportSubscriptionRef?
     private var channels: CFMutableDictionary?
     private var prevSample: CFDictionary?
+    private var cachedDelta: CFDictionary?
+    private var lastSampleTime: ContinuousClock.Instant?
 
     // MARK: - Setup
 
@@ -32,14 +34,29 @@ final class PMPSampler {
 
     // MARK: - Sampling
 
-    /// Takes a new sample and returns the delta dictionary, or `nil` if unavailable.
-    /// Callers should extract their own channels from the returned dictionary.
+    /// Returns the delta dictionary for the current polling tick, or `nil` if unavailable.
+    /// Multiple consumers calling within 500 ms of each other receive the **same** delta,
+    /// so neither consumer gets a near-zero interval from back-to-back rapid sampling.
+    ///
+    /// `setUp()` is called lazily on every tick until it succeeds, so transient IOReport
+    /// unavailability at launch (e.g. wake from sleep) recovers automatically.
     func nextDelta() -> CFDictionary? {
+        setUp()   // idempotent; retries until ref is set
         guard let ref, let channels else { return nil }
+        let now = PollingCadence.clock.now
+        // Serve the cached delta to any consumer that calls within the same polling tick.
+        if let lastTime = lastSampleTime,
+           now < lastTime.advanced(by: .milliseconds(500)),
+           let cached = cachedDelta {
+            return cached
+        }
         let curr = IOReport.takeSample(ref, channels: channels)
-        defer { prevSample = curr }
-        guard let prev = prevSample, let curr else { return nil }
-        return IOReport.sampleDelta(prev: prev, curr: curr)
+        let prev = prevSample
+        prevSample = curr          // always advance baseline, even on first call
+        lastSampleTime = now
+        guard let prev, let curr else { return nil }
+        cachedDelta = IOReport.sampleDelta(prev: prev, curr: curr)
+        return cachedDelta
     }
 }
 #endif
