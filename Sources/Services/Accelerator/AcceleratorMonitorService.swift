@@ -1,7 +1,7 @@
 import Foundation
 
 /// Snapshot of ANE accelerator load.
-public struct AcceleratorSnapshot: Sendable {
+public struct AcceleratorSnapshot: MetricSnapshot {
     /// ANE utilisation as a fraction in [0, 1]. `nil` if not available (Intel or IOReport unavailable).
     public let aneUsage: Double?
 }
@@ -10,27 +10,32 @@ public struct AcceleratorSnapshot: Sendable {
 /// Uses two-sample delta energy-model data; only meaningful on Apple Silicon.
 public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnapshot> {
     #if arch(arm64)
-    /// Injected sampler; defaults to `PMPSampler.shared` at first use inside poll().
+    /// Injected sampler; defaults to `PMPSampler.shared` when the stream starts.
     /// Setting this before `stream()` injects a mock for testing.
     @MonitorActor var sampler: PMPSampler = .shared
+    @MonitorActor private var state: ANEState?
     #endif
 
     @MonitorActor
-    override public func poll(continuation: AsyncStream<AcceleratorSnapshot>.Continuation) async {
+    override public func setUp() {
         #if arch(arm64)
         sampler.setUp()
-        var ane = ANEState(sampler: sampler)
+        state = ANEState(sampler: sampler)
         #endif
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            #if arch(arm64)
-            continuation.yield(AcceleratorSnapshot(aneUsage: ane.nextUsage()))
-            #else
-            continuation.yield(AcceleratorSnapshot(aneUsage: nil))
-            #endif
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
+    }
+
+    @MonitorActor
+    override public func sample() async -> AcceleratorSnapshot? {
+        #if arch(arm64)
+        guard var state else {
+            return AcceleratorSnapshot(aneUsage: nil)
         }
+        let usage = state.nextUsage()
+        self.state = state
+        return AcceleratorSnapshot(aneUsage: usage)
+        #else
+        return AcceleratorSnapshot(aneUsage: nil)
+        #endif
     }
 }
 

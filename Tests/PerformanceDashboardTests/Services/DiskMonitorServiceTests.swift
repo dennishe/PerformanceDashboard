@@ -4,33 +4,33 @@ import Foundation
 
 struct DiskMonitorServiceTests {
     @Test func sample_returnsNonNil_forBootVolume() {
-        let snapshot = DiskMonitorService.sample()
+        let snapshot = DiskMonitorService.readSnapshot()
         #expect(snapshot != nil)
     }
 
     @Test func sample_usage_isBetweenZeroAndOne() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         #expect(snapshot.usage >= 0)
         #expect(snapshot.usage <= 1)
     }
 
     @Test func sample_totalBytes_isPositive() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         #expect(snapshot.total > 0)
     }
 
     @Test func sample_availableBytes_isNonNegative() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         #expect(snapshot.available >= 0)
     }
 
     @Test func sample_availableBytes_isLessThanTotal() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         #expect(snapshot.available <= snapshot.total)
     }
 
     @Test func sample_usage_isConsistentWithBytes() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         let used = snapshot.total - snapshot.available
         let expectedUsage = Double(used) / Double(snapshot.total)
         #expect(abs(snapshot.usage - expectedUsage) < 0.001)
@@ -88,14 +88,14 @@ struct DiskMonitorServiceTests {
     }
 
     @Test func diskSnapshot_multipleInstances_independent() {
-        let a = DiskSnapshot(usage: 0.3, total: 100, available: 70)
-        let b = DiskSnapshot(usage: 0.8, total: 200, available: 40)
-        #expect(a.usage == 0.3)
-        #expect(b.usage == 0.8)
+        let firstSnapshot = DiskSnapshot(usage: 0.3, total: 100, available: 70)
+        let secondSnapshot = DiskSnapshot(usage: 0.8, total: 200, available: 40)
+        #expect(firstSnapshot.usage == 0.3)
+        #expect(secondSnapshot.usage == 0.8)
     }
 
     @Test func sample_usedBytesCalculation() {
-        guard let snapshot = DiskMonitorService.sample() else { return }
+        guard let snapshot = DiskMonitorService.readSnapshot() else { return }
         let used = snapshot.total - snapshot.available
         #expect(used >= 0)
     }

@@ -10,6 +10,6 @@ public enum ThresholdLevel: Equatable, Sendable {
 }
 
 /// Maps a 0–1 normalised value to a `ThresholdLevel`.
-public protocol ThresholdEvaluating {
+public protocol ThresholdEvaluating: Sendable {
     func level(for value: Double) -> ThresholdLevel
 }

@@ -26,15 +26,15 @@ struct DiskViewModelTests {
     }
 
     @Test func diskThreshold_normal_belowSeventyFive() {
-        #expect(DiskThreshold().level(for: 0.5) == .normal)
+        #expect(MetricThresholds.disk.level(for: 0.5) == .normal)
     }
 
     @Test func diskThreshold_warning_betweenSeventyFiveAndNinety() {
-        #expect(DiskThreshold().level(for: 0.8) == .warning)
+        #expect(MetricThresholds.disk.level(for: 0.8) == .warning)
     }
 
     @Test func diskThreshold_critical_aboveNinety() {
-        #expect(DiskThreshold().level(for: 0.95) == .critical)
+        #expect(MetricThresholds.disk.level(for: 0.95) == .critical)
     }
 
     @Test func stop_haltsUpdates() async {

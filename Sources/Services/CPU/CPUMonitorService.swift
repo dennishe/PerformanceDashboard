@@ -1,7 +1,7 @@
 import Darwin
 
 /// Per-process CPU usage from the last poll interval.
-public struct ProcessCPUStat: Sendable {
+public struct ProcessCPUStat: Sendable, Equatable {
     public let name: String
     /// Fraction of one core [0, 1].
     public let fraction: Double
@@ -9,7 +9,7 @@ public struct ProcessCPUStat: Sendable {
 }
 
 /// Snapshot of overall CPU utilisation at a point in time.
-public struct CPUSnapshot: Sendable {
+public struct CPUSnapshot: MetricSnapshot {
     /// Overall usage as a fraction in [0, 1].
     public let usage: Double
     /// Top processes by CPU usage, sorted descending. Empty on the first tick.
@@ -23,20 +23,16 @@ public struct CPUSnapshot: Sendable {
 
 /// Monitors CPU utilisation by computing deltas between `host_processor_info` samples.
 public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
+    @MonitorActor private var previousLoadInfo: [processor_cpu_load_info] = []
+    @MonitorActor private var previousPidTicks: [Int32: UInt64] = [:]
+
     @MonitorActor
-    override public func poll(continuation: AsyncStream<CPUSnapshot>.Continuation) async {
-        var previous: [processor_cpu_load_info] = []
-        var prevPidTicks: [Int32: UInt64] = [:]
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            let (current, usage) = CPUMonitorService.sample(previous: previous)
-            let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(previous: prevPidTicks)
-            previous = current
-            prevPidTicks = newPidTicks
-            continuation.yield(CPUSnapshot(usage: usage, topProcesses: topProcesses))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> CPUSnapshot? {
+        let (current, usage) = CPUMonitorService.sample(previous: previousLoadInfo)
+        let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(previous: previousPidTicks)
+        previousLoadInfo = current
+        previousPidTicks = newPidTicks
+        return CPUSnapshot(usage: usage, topProcesses: topProcesses)
     }
 
     // MARK: - Private sampling

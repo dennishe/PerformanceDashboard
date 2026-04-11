@@ -33,15 +33,15 @@ struct NetworkViewModelTests {
     }
 
     @Test func networkThreshold_normal_belowFiftyMB() {
-        #expect(NetworkThreshold().level(for: 10_000_000) == .normal)
+        #expect(MetricThresholds.network.level(for: 10_000_000) == .normal)
     }
 
     @Test func networkThreshold_warning_betweenFiftyAndHundredMB() {
-        #expect(NetworkThreshold().level(for: 75_000_000) == .warning)
+        #expect(MetricThresholds.network.level(for: 75_000_000) == .warning)
     }
 
     @Test func networkThreshold_critical_aboveHundredMB() {
-        #expect(NetworkThreshold().level(for: 150_000_000) == .critical)
+        #expect(MetricThresholds.network.level(for: 150_000_000) == .critical)
     }
 
     @Test func normalizedGauge_capsAtOne() async {

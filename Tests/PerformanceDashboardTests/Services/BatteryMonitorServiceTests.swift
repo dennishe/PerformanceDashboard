@@ -42,13 +42,13 @@ struct BatteryMonitorServiceTests {
     // MARK: - Sample integration
 
     @Test func sample_returnsChargeFractionInValidRange() {
-        let snapshot = BatteryMonitorService.sample()
+        let snapshot = BatteryMonitorService.readSnapshot()
         #expect(snapshot.chargeFraction >= 0)
         #expect(snapshot.chargeFraction <= 1)
     }
 
     @Test func sample_desktopWithNoBattery_hasConsistentDefaults() {
-        let snapshot = BatteryMonitorService.sample()
+        let snapshot = BatteryMonitorService.readSnapshot()
         if !snapshot.isPresent {
             // Desktop Mac: no battery → AC power, no time-to-empty
             #expect(snapshot.onAC == true)
@@ -133,7 +133,7 @@ struct BatteryMonitorServiceTests {
     }
 
     @Test func sample_healthFractionIsValidWhenBatteryPresent() {
-        let snapshot = BatteryMonitorService.sample()
+        let snapshot = BatteryMonitorService.readSnapshot()
         if snapshot.isPresent, let health = snapshot.healthFraction {
             #expect(health >= 0)
             #expect(health <= 1)
@@ -141,7 +141,7 @@ struct BatteryMonitorServiceTests {
     }
 
     @Test func sample_cycleCountIsNonNegativeWhenPresent() {
-        let snapshot = BatteryMonitorService.sample()
+        let snapshot = BatteryMonitorService.readSnapshot()
         if let cycles = snapshot.cycleCount {
             #expect(cycles >= 0)
         }

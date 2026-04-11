@@ -3,29 +3,30 @@ import IOKit
 import IOKit.graphics
 
 /// Snapshot of GPU utilisation at a point in time.
-public struct GPUSnapshot: Sendable {
+public struct GPUSnapshot: MetricSnapshot {
     /// GPU utilisation as a fraction in [0, 1]. `nil` if unavailable.
     public let usage: Double?
 }
 
 /// Monitors GPU utilisation via IOKit `PerformanceStatistics`.
 public final class GPUMonitorService: PollingMonitorBase<GPUSnapshot> {
+    @MonitorActor private var session: GPURegistrySession?
+
     @MonitorActor
-    override public func poll(continuation: AsyncStream<GPUSnapshot>.Continuation) async {
-        var session = GPURegistrySession()
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            let usage = session?.sampleUsage()
-            if usage == nil {
-                session = GPURegistrySession()
-            }
-            continuation.yield(GPUSnapshot(usage: usage))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func setUp() {
+        session = GPURegistrySession()
     }
 
-    nonisolated static func sample() -> Double? {
+    @MonitorActor
+    override public func sample() async -> GPUSnapshot? {
+        let usage = session?.sampleUsage()
+        if usage == nil {
+            session = GPURegistrySession()
+        }
+        return GPUSnapshot(usage: usage)
+    }
+
+    nonisolated static func readUsage() -> Double? {
         GPURegistrySession()?.sampleUsage()
     }
 }

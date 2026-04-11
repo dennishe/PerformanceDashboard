@@ -8,37 +8,6 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
 
     private var lastSnapshot = NetworkSnapshot(bytesInPerSecond: 0, bytesOutPerSecond: 0)
 
-    // MARK: - Combined tile (MetricTilePresenting)
-
-    public private(set) var tileModel = MetricTileModel(
-        title: "Network",
-        value: "0 KB/s",
-        gaugeValue: 0,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .normal,
-        subtitle: "↓ 0 KB/s  ↑ 0 KB/s",
-        systemImage: "network"
-    )
-
-    // MARK: - Per-direction models (used by NetworkTileView detail rows)
-
-    public private(set) var inTileModel = MetricTileModel(
-        title: "Net In",
-        value: "0 KB/s",
-        gaugeValue: 0,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .normal,
-        systemImage: "arrow.down.circle"
-    )
-    public private(set) var outTileModel = MetricTileModel(
-        title: "Net Out",
-        value: "0 KB/s",
-        gaugeValue: 0,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .normal,
-        systemImage: "arrow.up.circle"
-    )
-
     public private(set) var historyIn: [Double] = Constants.prefilledHistory
     public private(set) var historyOut: [Double] = Constants.prefilledHistory
 
@@ -50,8 +19,26 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
     public var outGauge: Double { min(bytesOutPerSecond / Self.ceilingBytesPerSecond, 1) }
     public var historyInGauge: [Double] { historyIn.map { min($0 / Self.ceilingBytesPerSecond, 1) } }
     public var historyOutGauge: [Double] { historyOut.map { min($0 / Self.ceilingBytesPerSecond, 1) } }
+    public var inTileModel: MetricTileModel {
+        Self.makeDirectionalTileModel(
+            direction: .inbound,
+            value: inLabel,
+            gaugeValue: inGauge,
+            history: historyInGauge,
+            thresholdLevel: thresholdLevel
+        )
+    }
+    public var outTileModel: MetricTileModel {
+        Self.makeDirectionalTileModel(
+            direction: .outbound,
+            value: outLabel,
+            gaugeValue: outGauge,
+            history: historyOutGauge,
+            thresholdLevel: thresholdLevel
+        )
+    }
 
-    public var thresholdLevel: ThresholdLevel { NetworkThreshold().level(for: bytesInPerSecond) }
+    public var thresholdLevel: ThresholdLevel { MetricThresholds.network.level(for: bytesInPerSecond) }
 
     private func bytesPerSecondLabel(_ bytes: Double) -> String {
         guard bytes > 0 else { return "0 KB/s" }
@@ -72,33 +59,18 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         )
         // Base-class history tracks the dominant direction's normalized gauge (combined sparkline).
         appendHistory(max(inGauge, outGauge))
-
-        updateAllTileModels(
-            totalLabel: bytesPerSecondLabel(bytesInPerSecond + bytesOutPerSecond),
-            combinedGauge: max(inGauge, outGauge),
-            thresholdLevel: thresholdLevel
-        )
     }
 
-    private func updateAllTileModels(
-        totalLabel: String, combinedGauge: Double, thresholdLevel: ThresholdLevel
-    ) {
-        let newTile = MetricTileModel(
-            title: "Network", value: totalLabel, gaugeValue: combinedGauge,
-            history: history, thresholdLevel: thresholdLevel,
-            subtitle: "↓ \(inLabel)  ↑ \(outLabel)", systemImage: "network"
+    override public func makeTileModel() -> MetricTileModel {
+        MetricTileModel(
+            title: "Network",
+            value: bytesPerSecondLabel(bytesInPerSecond + bytesOutPerSecond),
+            gaugeValue: max(inGauge, outGauge),
+            history: history,
+            thresholdLevel: thresholdLevel,
+            subtitle: "↓ \(inLabel)  ↑ \(outLabel)",
+            systemImage: "network"
         )
-        assignIfChanged(&tileModel, to: newTile)
-
-        let newIn = Self.makeTileModel(direction: .inbound, value: inLabel,
-                                       gaugeValue: inGauge, history: historyInGauge,
-                                       thresholdLevel: thresholdLevel)
-        assignIfChanged(&inTileModel, to: newIn)
-
-        let newOut = Self.makeTileModel(direction: .outbound, value: outLabel,
-                                        gaugeValue: outGauge, history: historyOutGauge,
-                                        thresholdLevel: thresholdLevel)
-        assignIfChanged(&outTileModel, to: newOut)
     }
 
     private enum TileDirection {
@@ -120,7 +92,7 @@ public final class NetworkViewModel: MonitorViewModelBase<NetworkSnapshot> {
         }
     }
 
-    private static func makeTileModel(
+    private static func makeDirectionalTileModel(
         direction: TileDirection,
         value: String,
         gaugeValue: Double,

@@ -1,9 +1,13 @@
 import IOKit
 
+protocol SMCReading: AnyObject {
+    func readBytes(key: String) -> (dataType: UInt32, bytes: [UInt8])?
+}
+
 /// Thin wrapper around the AppleSMC IOKit driver.
 /// Create one instance per service; call `close()` (or rely on `deinit`) to release.
 /// All reads are synchronous — call on `@MonitorActor`.
-final class SMCBridge {
+final class SMCBridge: SMCReading {
     private var connection: io_connect_t = IO_OBJECT_NULL
 
     init?() {

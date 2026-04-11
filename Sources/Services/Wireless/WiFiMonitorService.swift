@@ -2,7 +2,7 @@ import Foundation
 import CoreWLAN
 
 /// Snapshot of Wi-Fi interface state at a point in time.
-public struct WiFiSnapshot: Sendable {
+public struct WiFiSnapshot: MetricSnapshot {
     /// Current SSID; `nil` when disconnected or the radio is off.
     public let ssid: String?
     /// Receive signal strength in dBm; `nil` when disconnected.
@@ -15,14 +15,8 @@ public struct WiFiSnapshot: Sendable {
 /// CoreWLAN reads are thread-safe and run on `@MonitorActor`.
 public final class WiFiMonitorService: PollingMonitorBase<WiFiSnapshot> {
     @MonitorActor
-    override public func poll(continuation: AsyncStream<WiFiSnapshot>.Continuation) async {
-        let client = CWWiFiClient.shared()
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            continuation.yield(sample(client))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> WiFiSnapshot? {
+        sample(CWWiFiClient.shared())
     }
 
     nonisolated private func sample(_ client: CWWiFiClient) -> WiFiSnapshot {

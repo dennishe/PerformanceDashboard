@@ -1,39 +1,36 @@
 import Foundation
 
-enum UpdateLane: String {
-    case `default`
-    case wifi
-    case bluetooth
+@MainActor
+public protocol UpdateScheduling: AnyObject {
+    func enqueue(owner: AnyObject, update: @escaping () -> Void)
+    func cancel(owner: AnyObject)
 }
 
 @MainActor
-final class DashboardUpdateBatcher {
-    static let shared = DashboardUpdateBatcher()
+public final class DashboardUpdateBatcher: UpdateScheduling {
+    public static let shared = DashboardUpdateBatcher()
 
-    private struct UpdateKey: Hashable {
-        let ownerID: ObjectIdentifier
-        let lane: UpdateLane
-    }
-
-    private var pendingUpdates: [UpdateKey: [() -> Void]] = [:]
+    private let flushDelay: Duration
+    private var pendingUpdates: [ObjectIdentifier: [() -> Void]] = [:]
     private var flushTask: Task<Void, Never>?
 
-    private init() {}
+    init(flushDelay: Duration = Constants.updateCoalescingInterval) {
+        self.flushDelay = flushDelay
+    }
 
-    func enqueue(owner: AnyObject, lane: UpdateLane = .default, update: @escaping () -> Void) {
-        let key = UpdateKey(ownerID: ObjectIdentifier(owner), lane: lane)
+    public func enqueue(owner: AnyObject, update: @escaping () -> Void) {
+        let key = ObjectIdentifier(owner)
         pendingUpdates[key, default: []].append(update)
 
         guard flushTask == nil else { return }
         flushTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: Constants.updateCoalescingInterval)
+            try? await Task.sleep(for: self?.flushDelay ?? Constants.updateCoalescingInterval)
             self?.flush()
         }
     }
 
-    func cancel(owner: AnyObject) {
-        let ownerID = ObjectIdentifier(owner)
-        pendingUpdates = pendingUpdates.filter { $0.key.ownerID != ownerID }
+    public func cancel(owner: AnyObject) {
+        pendingUpdates.removeValue(forKey: ObjectIdentifier(owner))
     }
 
     private func flush() {

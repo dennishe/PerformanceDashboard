@@ -3,13 +3,13 @@ import IOBluetooth
 import IOKit
 
 /// Battery level for a connected Bluetooth peripheral.
-public struct PeripheralBattery: Sendable {
+public struct PeripheralBattery: Sendable, Equatable {
     public let name: String
     public let percent: Int
 }
 
 /// Snapshot of Bluetooth controller state at a point in time.
-public struct BluetoothSnapshot: Sendable {
+public struct BluetoothSnapshot: MetricSnapshot {
     /// Number of currently connected Bluetooth devices.
     public let connectedCount: Int
     /// `true` while Bluetooth is powered on.
@@ -28,15 +28,10 @@ public struct BluetoothSnapshot: Sendable {
 /// IOBluetooth requires main-thread access, so sampling is dispatched to `@MainActor`.
 public final class BluetoothMonitorService: PollingMonitorBase<BluetoothSnapshot> {
     @MonitorActor
-    override public func poll(continuation: AsyncStream<BluetoothSnapshot>.Continuation) async {
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            let (count, on) = await sampleStateOnMain()
-            let peripherals = BluetoothMonitorService.samplePeripheralBatteries()
-            continuation.yield(BluetoothSnapshot(connectedCount: count, on: on, peripherals: peripherals))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> BluetoothSnapshot? {
+        let (count, on) = await sampleStateOnMain()
+        let peripherals = BluetoothMonitorService.samplePeripheralBatteries()
+        return BluetoothSnapshot(connectedCount: count, on: on, peripherals: peripherals)
     }
 
     private func sampleStateOnMain() async -> (connectedCount: Int, on: Bool) {

@@ -1,4 +1,14 @@
 import Foundation
+@testable import PerformanceDashboard
+
+@MainActor
+final class SynchronousBatcher: UpdateScheduling {
+    func enqueue(owner: AnyObject, update: @escaping () -> Void) {
+        update()
+    }
+
+    func cancel(owner: AnyObject) {}
+}
 
 @MainActor
 func waitForAsyncUpdates(cycles: Int = 1) async {

@@ -1,9 +1,10 @@
-/// Provides the `AsyncStream` lifecycle boilerplate shared by all monitor services.
+/// Base class for all production monitor services.
 ///
-/// Subclasses override `poll(continuation:)` with their metric-specific sampling logic
-/// and are otherwise free from boilerplate. Complies with OCP: new metrics are added by
-/// subclassing, never by modifying this type.
-open class PollingMonitorBase<Value: Sendable>: MetricMonitorProtocol {
+/// Override `sample()` to produce one metric snapshot per polling interval.
+/// `PollingMonitorBase` owns the async loop, scheduling, lifecycle hooks, and
+/// cancellation handling. View models should still inject monitors as
+/// `any MetricMonitorProtocol`.
+open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
     private var continuation: AsyncStream<Value>.Continuation?
     private var pollingTask: Task<Void, Never>?
 
@@ -12,9 +13,11 @@ open class PollingMonitorBase<Value: Sendable>: MetricMonitorProtocol {
     @MainActor
     public func stream() -> AsyncStream<Value> {
         AsyncStream { continuation in
+            self.pollingTask?.cancel()
+            self.continuation?.finish()
             self.continuation = continuation
             self.pollingTask = Task {
-                await self.poll(continuation: continuation)
+                await self.runPollingLoop(continuation: continuation)
             }
         }
     }
@@ -23,12 +26,53 @@ open class PollingMonitorBase<Value: Sendable>: MetricMonitorProtocol {
     public func stop() {
         pollingTask?.cancel()
         continuation?.finish()
+        pollingTask = nil
+        continuation = nil
     }
 
-    /// Override to provide metric-specific sampling logic.
-    /// The loop, sleep, and cancellation check live here in each subclass.
     @MonitorActor
-    open func poll(continuation: AsyncStream<Value>.Continuation) async {
-        preconditionFailure("\(type(of: self)) must override poll(continuation:)")
+    private func runPollingLoop(continuation: AsyncStream<Value>.Continuation) async {
+        setUp()
+        defer {
+            tearDown()
+            continuation.finish()
+        }
+
+        var nextPoll = initialPollDeadline()
+        while !Task.isCancelled {
+            do {
+                try await PollingCadence.sleep(until: nextPoll)
+            } catch {
+                break
+            }
+
+            if let snapshot = await sample() {
+                continuation.yield(snapshot)
+            }
+
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+        }
+    }
+
+    /// Override to prepare state before the polling loop starts.
+    @MonitorActor
+    open func setUp() {}
+
+    /// Override to clean up resources after the polling loop stops.
+    @MonitorActor
+    open func tearDown() {}
+
+    /// Override when a service needs to delay the first sample.
+    @MonitorActor
+    open func initialPollDeadline() -> ContinuousClock.Instant {
+        PollingCadence.clock.now
+    }
+
+    /// Override to provide one metric snapshot for the current polling tick.
+    @MonitorActor
+    open func sample() async -> Value? {
+        preconditionFailure(
+            "\(type(of: self)) must override sample() in PollingMonitorBase"
+        )
     }
 }

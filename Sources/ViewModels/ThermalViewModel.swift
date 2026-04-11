@@ -6,15 +6,6 @@ import SwiftUI
 public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
     private var lastSnapshot = ThermalSnapshot(cpuCelsius: nil, gpuCelsius: nil, sensorReadings: [])
 
-    public private(set) var tileModel = MetricTileModel(
-        title: "Temp",
-        value: "—",
-        gaugeValue: nil,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .inactive,
-        systemImage: "thermometer.medium"
-    )
-
     public var cpuCelsius: Double? { lastSnapshot.cpuCelsius }
     public var gpuCelsius: Double? { lastSnapshot.gpuCelsius }
     public var gaugeValue: Double? { cpuCelsius.map(Self.normalizedCelsius) }
@@ -30,30 +21,16 @@ public final class ThermalViewModel: MonitorViewModelBase<ThermalSnapshot> {
 
     public var thresholdLevel: ThresholdLevel {
         guard let gaugeValue else { return .inactive }
-        return ThermalThreshold().level(for: gaugeValue)
+        return MetricThresholds.thermal.level(for: gaugeValue)
     }
 
     override public func receive(_ snapshot: ThermalSnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.cpuCelsius.map(Self.normalizedCelsius) ?? 0)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                cpuLabel: cpuLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                gpuLabel: gpuLabel
-            )
-        )
     }
 
-    private static func makeTileModel(
-        cpuLabel: String,
-        gaugeValue: Double?,
-        history: [Double],
-        gpuLabel: String?
-    ) -> MetricTileModel {
-        let thresholdLevel = gaugeValue.map(ThermalThreshold().level(for:)) ?? .inactive
+    override public func makeTileModel() -> MetricTileModel {
+        let thresholdLevel = gaugeValue.map(MetricThresholds.thermal.level(for:)) ?? .inactive
         return MetricTileModel(
             title: "Temp",
             value: cpuLabel,

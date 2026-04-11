@@ -6,16 +6,6 @@ import SwiftUI
 public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
     private var lastSnapshot = DiskSnapshot(usage: 0, total: 0, available: 0)
 
-    public private(set) var tileModel = MetricTileModel(
-        title: "Disk",
-        value: 0.percentFormatted(),
-        gaugeValue: 0,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .normal,
-        subtitle: AppFormatters.byteCountString(0, style: .file) + " free",
-        systemImage: "internaldrive"
-    )
-
     public var usage: Double { lastSnapshot.usage }
     public var totalBytes: Int64 { lastSnapshot.total }
     public var availableBytes: Int64 { lastSnapshot.available }
@@ -23,34 +13,20 @@ public final class DiskViewModel: MonitorViewModelBase<DiskSnapshot> {
     public var availableLabel: String { AppFormatters.byteCountString(availableBytes, style: .file) }
     public var totalLabel: String { AppFormatters.byteCountString(totalBytes, style: .file) }
 
-    public var thresholdLevel: ThresholdLevel { DiskThreshold().level(for: usage) }
+    public var thresholdLevel: ThresholdLevel { MetricThresholds.disk.level(for: usage) }
 
     override public func receive(_ snapshot: DiskSnapshot) {
         lastSnapshot = snapshot
         appendHistory(snapshot.usage)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                usage: usage,
-                usageLabel: usageLabel,
-                availableLabel: availableLabel,
-                history: history
-            )
-        )
     }
 
-    private static func makeTileModel(
-        usage: Double,
-        usageLabel: String,
-        availableLabel: String,
-        history: [Double]
-    ) -> MetricTileModel {
+    override public func makeTileModel() -> MetricTileModel {
         MetricTileModel(
             title: "Disk",
             value: usageLabel,
             gaugeValue: usage,
             history: history,
-            thresholdLevel: DiskThreshold().level(for: usage),
+            thresholdLevel: MetricThresholds.disk.level(for: usage),
             subtitle: availableLabel + " free",
             systemImage: "internaldrive"
         )

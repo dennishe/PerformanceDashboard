@@ -26,7 +26,7 @@ struct AcceleratorViewModelTests {
     }
 
     @Test func acceleratorThreshold_normal_belowSixty() {
-        #expect(AcceleratorThreshold().level(for: 0.3) == .normal)
+        #expect(MetricThresholds.accelerator.level(for: 0.3) == .normal)
     }
 
     @Test func stop_haltsUpdates() async {
@@ -103,10 +103,10 @@ struct AcceleratorViewModelTests {
     }
 
     @Test func acceleratorThreshold_warning_betweenSixtyAndEightyFive() {
-        #expect(AcceleratorThreshold().level(for: 0.7) == .warning)
+        #expect(MetricThresholds.accelerator.level(for: 0.7) == .warning)
     }
 
     @Test func acceleratorThreshold_critical_aboveEightyFive() {
-        #expect(AcceleratorThreshold().level(for: 0.9) == .critical)
+        #expect(MetricThresholds.accelerator.level(for: 0.9) == .critical)
     }
 }

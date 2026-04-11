@@ -38,15 +38,15 @@ struct CPUViewModelTests {
     }
 
     @Test func cpuThreshold_normal_belowSixty() {
-        #expect(CPUThreshold().level(for: 0.5) == .normal)
+        #expect(MetricThresholds.cpu.level(for: 0.5) == .normal)
     }
 
     @Test func cpuThreshold_warning_betweenSixtyAndEightyFive() {
-        #expect(CPUThreshold().level(for: 0.7) == .warning)
+        #expect(MetricThresholds.cpu.level(for: 0.7) == .warning)
     }
 
     @Test func cpuThreshold_critical_aboveEightyFive() {
-        #expect(CPUThreshold().level(for: 0.9) == .critical)
+        #expect(MetricThresholds.cpu.level(for: 0.9) == .critical)
     }
 
     @Test func stop_haltsUpdates() async {
@@ -157,7 +157,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
         await waitForAsyncUpdates()
-        #expect(viewModel.topProcesses[0].name == "")
-        #expect(viewModel.detailModel.stats[0].label == "")
+        #expect(viewModel.topProcesses[0].name.isEmpty)
+        #expect(viewModel.detailModel.stats[0].label.isEmpty)
     }
 }

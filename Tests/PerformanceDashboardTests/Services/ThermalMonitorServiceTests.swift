@@ -2,6 +2,10 @@ import Testing
 @testable import PerformanceDashboard
 
 struct ThermalMonitorServiceTests {
+    private func sp78Bytes(_ value: Double) -> [UInt8] {
+        let raw = UInt16(value * 256)
+        return [UInt8(raw >> 8), UInt8(raw & 0xFF)]
+    }
 
     // MARK: - ThermalSnapshot
 
@@ -35,6 +39,18 @@ struct ThermalMonitorServiceTests {
         let snapshot = ThermalMonitorService.sample(nil)
         #expect(snapshot.cpuCelsius == nil)
         #expect(snapshot.gpuCelsius == nil)
+    }
+
+    @Test func sample_readsCpuTemperature_fromInjectedReader() {
+        let sp78Type = SMCBridge.fourCC("sp78") ?? 0
+        let reader = MockSMCReader(readings: [
+            "Tp2b": (dataType: sp78Type, bytes: sp78Bytes(72))
+        ])
+
+        let snapshot = ThermalMonitorService.sample(reader)
+
+        #expect(snapshot.cpuCelsius == 72)
+        #expect(snapshot.sensorReadings == [ThermalReading(label: "P-Cluster 0", celsius: 72)])
     }
 
     // MARK: - Service lifecycle

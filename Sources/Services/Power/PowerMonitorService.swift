@@ -1,24 +1,30 @@
 import Foundation
 
 /// Snapshot of total system power draw.
-public struct PowerSnapshot: Sendable {
+public struct PowerSnapshot: MetricSnapshot {
     /// Total system power in watts, or `nil` when unavailable.
     public let watts: Double?
 }
 
 /// Monitors system power draw via a platform-specific `PowerStrategy`.
 /// The strategy is selected once when polling begins; adding a new platform requires
-/// only a new `PowerStrategy` implementation — `poll` is never modified (OCP).
+/// only a new `PowerStrategy` implementation — `sample` is never modified (OCP).
 public final class PowerMonitorService: PollingMonitorBase<PowerSnapshot> {
+    @MonitorActor private var strategy: (any PowerStrategy)?
+
     @MonitorActor
-    override public func poll(continuation: AsyncStream<PowerSnapshot>.Continuation) async {
-        var strategy = PowerMonitorService.defaultStrategy()
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            continuation.yield(PowerSnapshot(watts: strategy.nextWatts()))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
+    override public func setUp() {
+        strategy = PowerMonitorService.defaultStrategy()
+    }
+
+    @MonitorActor
+    override public func sample() async -> PowerSnapshot? {
+        guard var strategy else {
+            return PowerSnapshot(watts: nil)
         }
+        let watts = strategy.nextWatts()
+        self.strategy = strategy
+        return PowerSnapshot(watts: watts)
     }
 
     @MonitorActor

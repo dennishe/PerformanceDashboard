@@ -6,15 +6,6 @@ import SwiftUI
 public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
     private var lastSnapshot = FanSnapshot(fans: [])
 
-    public private(set) var tileModel = MetricTileModel(
-        title: "Fans",
-        value: "No fans",
-        gaugeValue: nil,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .inactive,
-        systemImage: "fan"
-    )
-
     public var fans: [FanReading] { lastSnapshot.fans }
     public var gaugeValue: Double? { fans.map(\.fraction).max().map { max($0, 0) } }
     public var primaryLabel: String { Self.makePrimaryLabel(from: fans) }
@@ -22,31 +13,17 @@ public final class FanViewModel: MonitorViewModelBase<FanSnapshot> {
 
     public var thresholdLevel: ThresholdLevel {
         guard !fans.isEmpty else { return .inactive }
-        return FanThreshold().level(for: gaugeValue ?? 0)
+        return MetricThresholds.fan.level(for: gaugeValue ?? 0)
     }
 
     override public func receive(_ snapshot: FanSnapshot) {
         lastSnapshot = snapshot
         let fraction = fans.map(\.fraction).max() ?? 0
         appendHistory(fraction)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                primaryLabel: primaryLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                subtitle: subtitle
-            )
-        )
     }
 
-    private static func makeTileModel(
-        primaryLabel: String,
-        gaugeValue: Double?,
-        history: [Double],
-        subtitle: String?
-    ) -> MetricTileModel {
-        let thresholdLevel = gaugeValue.map(FanThreshold().level(for:)) ?? .inactive
+    override public func makeTileModel() -> MetricTileModel {
+        let thresholdLevel = gaugeValue.map(MetricThresholds.fan.level(for:)) ?? .inactive
         return MetricTileModel(
             title: "Fans",
             value: primaryLabel,

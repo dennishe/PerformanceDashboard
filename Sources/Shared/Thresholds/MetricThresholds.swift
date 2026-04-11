@@ -36,40 +36,25 @@ public struct InverseThreshold: ThresholdEvaluating {
     }
 }
 
-private func linearThresholdLevel(
-    _ value: Double,
-    normalUpperBound: Double,
-    warningUpperBound: Double
-) -> ThresholdLevel {
-    LinearThreshold(normalUpperBound: normalUpperBound, warningUpperBound: warningUpperBound)
-        .level(for: value)
-}
+public enum MetricThresholds {
+    private static let standard = LinearThreshold(normalUpperBound: 0.6, warningUpperBound: 0.85)
+    private static let relaxed = LinearThreshold(normalUpperBound: 0.7, warningUpperBound: 0.9)
 
-// MARK: - CPU
-
-/// Threshold configuration for CPU utilisation.
-public struct CPUThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
-    }
-}
-
-// MARK: - GPU
-
-/// Threshold configuration for GPU utilisation.
-public struct GPUThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
-    }
-}
-
-// MARK: - Memory
-
-/// Threshold configuration for memory pressure.
-public struct MemoryThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.9)
-    }
+    public static let cpu: any ThresholdEvaluating = standard
+    public static let gpu: any ThresholdEvaluating = standard
+    public static let accelerator: any ThresholdEvaluating = standard
+    public static let power: any ThresholdEvaluating = standard
+    public static let mediaEngine: any ThresholdEvaluating = standard
+    public static let memory: any ThresholdEvaluating = relaxed
+    public static let fan: any ThresholdEvaluating = relaxed
+    public static let thermal: any ThresholdEvaluating =
+        LinearThreshold(normalUpperBound: 0.7, warningUpperBound: 0.85)
+    public static let disk: any ThresholdEvaluating =
+        LinearThreshold(normalUpperBound: 0.75, warningUpperBound: 0.9)
+    public static let battery: any ThresholdEvaluating =
+        InverseThreshold(normalLowerBound: 0.2, warningLowerBound: 0.1)
+    public static let network: any ThresholdEvaluating = NetworkThreshold()
+    public static let wireless: any ThresholdEvaluating = WirelessThreshold()
 }
 
 // MARK: - Network
@@ -83,69 +68,6 @@ public struct NetworkThreshold: ThresholdEvaluating {
         case ..<100_000_000: return .warning
         default:             return .critical
         }
-    }
-}
-
-// MARK: - Disk
-
-/// Threshold configuration for disk usage.
-public struct DiskThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.75, warningUpperBound: 0.9)
-    }
-}
-
-// MARK: - Accelerator (ANE)
-
-/// Threshold configuration for ANE utilisation.
-public struct AcceleratorThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
-    }
-}
-
-// MARK: - Power
-
-/// Threshold levels for power draw (normalised via adaptive maximum).
-public struct PowerThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
-    }
-}
-
-// MARK: - Fan
-
-/// Threshold levels for fan speed usage.
-public struct FanThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.9)
-    }
-}
-
-// MARK: - Thermal
-
-/// Threshold levels for CPU temperature.
-public struct ThermalThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.7, warningUpperBound: 0.85)
-    }
-}
-
-// MARK: - Battery
-
-/// Threshold levels for battery charge (inverted — low charge is critical).
-public struct BatteryThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        InverseThreshold(normalLowerBound: 0.2, warningLowerBound: 0.1).level(for: value)
-    }
-}
-
-// MARK: - Media Engine
-
-/// Threshold levels for Media Engine combined load.
-public struct MediaEngineThreshold: ThresholdEvaluating {
-    public func level(for value: Double) -> ThresholdLevel {
-        linearThresholdLevel(value, normalUpperBound: 0.6, warningUpperBound: 0.85)
     }
 }
 

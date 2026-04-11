@@ -3,15 +3,6 @@ import SwiftUI
 @MainActor
 @Observable
 public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
-    public private(set) var tileModel = MetricTileModel(
-        title: "Battery",
-        value: "AC Power",
-        gaugeValue: nil,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .inactive,
-        systemImage: "battery.100"
-    )
-
     public private(set) var snapshot = BatterySnapshot(
         isPresent: false, chargeFraction: 0, isCharging: false,
         onAC: true, timeToEmptyMinutes: nil, cycleCount: nil, healthFraction: nil
@@ -24,33 +15,17 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
 
     public var thresholdLevel: ThresholdLevel {
         guard snapshot.isPresent else { return .inactive }
-        return BatteryThreshold().level(for: snapshot.chargeFraction)
+        return MetricThresholds.battery.level(for: snapshot.chargeFraction)
     }
 
     override public func receive(_ newSnapshot: BatterySnapshot) {
         snapshot = newSnapshot
         appendHistory(newSnapshot.chargeFraction)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                snapshot: snapshot,
-                chargeLabel: chargeLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                statusLabel: statusLabel
-            )
-        )
     }
 
-    private static func makeTileModel(
-        snapshot: BatterySnapshot,
-        chargeLabel: String,
-        gaugeValue: Double?,
-        history: [Double],
-        statusLabel: String?
-    ) -> MetricTileModel {
+    override public func makeTileModel() -> MetricTileModel {
         let thresholdLevel: ThresholdLevel = snapshot.isPresent
-            ? BatteryThreshold().level(for: snapshot.chargeFraction)
+            ? MetricThresholds.battery.level(for: snapshot.chargeFraction)
             : .inactive
         return MetricTileModel(
             title: "Battery",

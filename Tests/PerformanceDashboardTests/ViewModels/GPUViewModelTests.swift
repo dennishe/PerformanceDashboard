@@ -26,11 +26,11 @@ struct GPUViewModelTests {
     }
 
     @Test func gpuThreshold_normal_belowSixty() {
-        #expect(GPUThreshold().level(for: 0.4) == .normal)
+        #expect(MetricThresholds.gpu.level(for: 0.4) == .normal)
     }
 
     @Test func gpuThreshold_critical_aboveEightyFive() {
-        #expect(GPUThreshold().level(for: 0.9) == .critical)
+        #expect(MetricThresholds.gpu.level(for: 0.9) == .critical)
     }
 
     @Test func stop_haltsUpdates() async {
@@ -106,6 +106,6 @@ struct GPUViewModelTests {
     }
 
     @Test func gpuThreshold_warning_betweenSixtyAndEightyFive() {
-        #expect(GPUThreshold().level(for: 0.7) == .warning)
+        #expect(MetricThresholds.gpu.level(for: 0.7) == .warning)
     }
 }

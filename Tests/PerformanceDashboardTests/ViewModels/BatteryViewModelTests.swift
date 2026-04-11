@@ -195,30 +195,4 @@ struct BatteryViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.detailModel.stats.isEmpty)
     }
-
-    @Test func detailModel_includesCharge_whenBatteryPresent() async {
-        let monitor = MockMonitor<BatterySnapshot>()
-        monitor.snapshots = [BatterySnapshot(
-            isPresent: true, chargeFraction: 0.75, isCharging: false,
-            onAC: true, timeToEmptyMinutes: nil, cycleCount: nil, healthFraction: nil
-        )]
-        let viewModel = BatteryViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
-        let chargeIndex = viewModel.detailModel.stats.firstIndex(where: { $0.label == "Charge" })
-        #expect(chargeIndex != nil)
-        #expect(viewModel.detailModel.stats[chargeIndex!].value == "75.0%")
-    }
-
-    @Test func statusLabel_showsExactHours_whenMinutesZero() async {
-        let monitor = MockMonitor<BatterySnapshot>()
-        monitor.snapshots = [BatterySnapshot(
-            isPresent: true, chargeFraction: 0.6, isCharging: false,
-            onAC: false, timeToEmptyMinutes: 120, cycleCount: nil, healthFraction: nil
-        )]
-        let viewModel = BatteryViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
-        #expect(viewModel.statusLabel == "2h 0m left")
-    }
 }

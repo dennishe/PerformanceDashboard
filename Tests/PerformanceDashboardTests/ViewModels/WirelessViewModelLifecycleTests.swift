@@ -6,7 +6,7 @@ struct WirelessViewModelLifecycleTests {
 
     @Test func history_appendsNormalizedRSSI() async {
         let wifiMock = MockMonitor<WiFiSnapshot>(snapshots: [WiFiSnapshot(ssid: "Net", rssi: -65, on: true)])
-        let btMock   = MockMonitor<BluetoothSnapshot>()
+        let btMock = MockMonitor<BluetoothSnapshot>(snapshots: [BluetoothSnapshot(connectedCount: 0, on: false)])
         let viewModel = WirelessViewModel(wifiMonitor: wifiMock, btMonitor: btMock)
         viewModel.start()
         await waitForAsyncUpdates()

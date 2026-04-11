@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 /// Snapshot of system memory at a point in time.
-public struct MemorySnapshot: Sendable {
+public struct MemorySnapshot: MetricSnapshot {
     /// Used memory as a fraction in [0, 1].
     public let usage: Double
     /// Total physical memory in bytes.
@@ -14,18 +14,11 @@ public struct MemorySnapshot: Sendable {
 /// Monitors memory pressure via `host_statistics64`.
 public final class MemoryMonitorService: PollingMonitorBase<MemorySnapshot> {
     @MonitorActor
-    override public func poll(continuation: AsyncStream<MemorySnapshot>.Continuation) async {
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            if let snapshot = MemoryMonitorService.sample() {
-                continuation.yield(snapshot)
-            }
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> MemorySnapshot? {
+        MemoryMonitorService.readSnapshot()
     }
 
-    nonisolated static func sample() -> MemorySnapshot? {
+    nonisolated static func readSnapshot() -> MemorySnapshot? {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size)
         let result = withUnsafeMutablePointer(to: &stats) { pointer in

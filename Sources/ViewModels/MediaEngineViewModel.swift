@@ -6,16 +6,6 @@ import SwiftUI
 public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapshot> {
     private var lastSnapshot = MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
 
-    public private(set) var tileModel = MetricTileModel(
-        title: "Media Engine",
-        value: "—",
-        gaugeValue: nil,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .normal,
-        subtitle: "Dec: —",
-        systemImage: "film.stack"
-    )
-
     public var encodeMilliwatts: Double? { lastSnapshot.encodeMilliwatts }
     public var decodeMilliwatts: Double? { lastSnapshot.decodeMilliwatts }
     public var gaugeValue: Double? { combinedMilliwatts.map { min(1.0, max(0.0, $0 / adaptiveMax)) } }
@@ -26,7 +16,7 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
     private var adaptiveMax: Double = 100.0  // mW; grows with observed values
 
     public var thresholdLevel: ThresholdLevel {
-        MediaEngineThreshold().level(for: gaugeValue ?? 0)
+        MetricThresholds.mediaEngine.level(for: gaugeValue ?? 0)
     }
 
     private var combinedMilliwatts: Double? {
@@ -44,29 +34,15 @@ public final class MediaEngineViewModel: MonitorViewModelBase<MediaEngineSnapsho
         if let combined = combinedMilliwatts, combined > adaptiveMax { adaptiveMax = combined }
         let normalized = combinedMilliwatts.map { min(1.0, $0 / adaptiveMax) } ?? 0
         appendHistory(normalized)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                combinedLabel: combinedLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                decodeLabel: decodeLabel
-            )
-        )
     }
 
-    private static func makeTileModel(
-        combinedLabel: String,
-        gaugeValue: Double?,
-        history: [Double],
-        decodeLabel: String
-    ) -> MetricTileModel {
+    override public func makeTileModel() -> MetricTileModel {
         MetricTileModel(
             title: "Media Engine",
             value: combinedLabel,
             gaugeValue: gaugeValue,
             history: history,
-            thresholdLevel: MediaEngineThreshold().level(for: gaugeValue ?? 0),
+            thresholdLevel: MetricThresholds.mediaEngine.level(for: gaugeValue ?? 0),
             subtitle: decodeLabel,
             systemImage: "film.stack"
         )

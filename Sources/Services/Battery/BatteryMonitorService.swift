@@ -3,7 +3,7 @@ import IOKit
 import IOKit.ps
 
 /// Snapshot of battery and power-source state.
-public struct BatterySnapshot: Sendable {
+public struct BatterySnapshot: MetricSnapshot {
     /// `false` on desktop Macs with no internal battery.
     public let isPresent: Bool
     /// Charge level in [0, 1]. 0 on desktop Macs.
@@ -23,18 +23,13 @@ public struct BatterySnapshot: Sendable {
 /// Monitors battery and power source via the public IOPS API + IORegistry.
 public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
     @MonitorActor
-    override public func poll(continuation: AsyncStream<BatterySnapshot>.Continuation) async {
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            continuation.yield(BatteryMonitorService.sample())
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> BatterySnapshot? {
+        BatteryMonitorService.readSnapshot()
     }
 
     // MARK: - Sampling
 
-    nonisolated static func sample() -> BatterySnapshot {
+    nonisolated static func readSnapshot() -> BatterySnapshot {
         guard let psInfo = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
               let sources = IOPSCopyPowerSourcesList(psInfo)?.takeRetainedValue() as? [CFTypeRef],
               !sources.isEmpty,

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Snapshot of Apple Silicon Media Engine activity.
-public struct MediaEngineSnapshot: Sendable {
+public struct MediaEngineSnapshot: MetricSnapshot {
     /// Average encoder power in milliwatts over the last sample window; `nil` on Intel.
     public let encodeMilliwatts: Double?
     /// Average decoder power in milliwatts over the last sample window; `nil` on Intel.
@@ -13,28 +13,26 @@ public struct MediaEngineSnapshot: Sendable {
 /// IOReport group; values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
 public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnapshot> {
     #if arch(arm64)
-    /// Injected sampler; defaults to `PMPSampler.shared` at first use inside poll().
+    /// Injected sampler; defaults to `PMPSampler.shared` when the stream starts.
     @MonitorActor var sampler: PMPSampler = .shared
+    @MonitorActor private var state: MediaEngineState?
     #endif
 
     @MonitorActor
-    override public func poll(continuation: AsyncStream<MediaEngineSnapshot>.Continuation) async {
+    override public func setUp() {
         #if arch(arm64)
         sampler.setUp()
-        let state = MediaEngineState(sampler: sampler)
+        state = MediaEngineState(sampler: sampler)
         #endif
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            #if arch(arm64)
-            let snapshot = state.nextSnapshot()
-                ?? MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
-            #else
-            let snapshot = MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
-            #endif
-            continuation.yield(snapshot)
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    }
+
+    @MonitorActor
+    override public func sample() async -> MediaEngineSnapshot? {
+        #if arch(arm64)
+        return state?.nextSnapshot() ?? MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+        #else
+        return MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+        #endif
     }
 }
 

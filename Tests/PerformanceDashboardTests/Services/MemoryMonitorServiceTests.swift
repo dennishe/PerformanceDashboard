@@ -4,24 +4,24 @@ import Foundation
 
 struct MemoryMonitorServiceTests {
     @Test func sample_returnsNonNil_onRealSystem() {
-        let snapshot = MemoryMonitorService.sample()
+        let snapshot = MemoryMonitorService.readSnapshot()
         #expect(snapshot != nil)
     }
 
     @Test func sample_usage_isBetweenZeroAndOne() {
-        guard let snapshot = MemoryMonitorService.sample() else { return }
+        guard let snapshot = MemoryMonitorService.readSnapshot() else { return }
         #expect(snapshot.usage >= 0)
         #expect(snapshot.usage <= 1)
     }
 
     @Test func sample_total_matchesPhysicalMemory() {
-        guard let snapshot = MemoryMonitorService.sample() else { return }
+        guard let snapshot = MemoryMonitorService.readSnapshot() else { return }
         let physical = ProcessInfo.processInfo.physicalMemory
         #expect(snapshot.total == physical)
     }
 
     @Test func sample_usedBytes_isLessThanTotal() {
-        guard let snapshot = MemoryMonitorService.sample() else { return }
+        guard let snapshot = MemoryMonitorService.readSnapshot() else { return }
         #expect(snapshot.used <= snapshot.total)
     }
 
@@ -76,7 +76,7 @@ struct MemoryMonitorServiceTests {
     }
 
     @Test func sample_usageRatioConsistency() {
-        guard let snapshot = MemoryMonitorService.sample() else { return }
+        guard let snapshot = MemoryMonitorService.readSnapshot() else { return }
         if snapshot.total > 0 {
             let expected = Double(snapshot.used) / Double(snapshot.total)
             #expect(abs(snapshot.usage - expected) < 0.001)
@@ -84,7 +84,7 @@ struct MemoryMonitorServiceTests {
     }
 
     @Test func sample_usedIsNonNegative() {
-        guard let snapshot = MemoryMonitorService.sample() else { return }
+        guard let snapshot = MemoryMonitorService.readSnapshot() else { return }
         #expect(snapshot.used >= 0)
     }
 }

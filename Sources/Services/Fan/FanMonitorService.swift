@@ -1,7 +1,7 @@
 import Foundation
 
 /// Reading for a single fan: current and maximum RPM.
-public struct FanReading: Sendable {
+public struct FanReading: Sendable, Equatable {
     public let current: Double
     public let max: Double
 
@@ -12,37 +12,43 @@ public struct FanReading: Sendable {
 }
 
 /// Snapshot of all fans on the system.
-public struct FanSnapshot: Sendable {
+public struct FanSnapshot: MetricSnapshot {
     /// One entry per fan. Empty on fanless Macs (e.g. MacBook Air M-series).
     public let fans: [FanReading]
 }
 
 /// Reads fan speeds and maxima from the SMC.
 public final class FanMonitorService: PollingMonitorBase<FanSnapshot> {
+    @MonitorActor private var smc: SMCBridge?
+
     @MonitorActor
-    override public func poll(continuation: AsyncStream<FanSnapshot>.Continuation) async {
-        let smc = SMCBridge()
-        defer { smc?.close() }
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            continuation.yield(FanSnapshot(fans: FanMonitorService.sample(smc)))
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func setUp() {
+        smc = SMCBridge()
+    }
+
+    @MonitorActor
+    override public func tearDown() {
+        smc?.close()
+        smc = nil
+    }
+
+    @MonitorActor
+    override public func sample() async -> FanSnapshot? {
+        FanSnapshot(fans: FanMonitorService.sample(smc))
     }
 
     // MARK: - Private sampling
 
-    nonisolated static func sample(_ bridge: SMCBridge?) -> [FanReading] {
-        guard let bridge else { return [] }
-        guard let countResult = bridge.readBytes(key: "FNum"),
+    nonisolated static func sample(_ reader: (any SMCReading)?) -> [FanReading] {
+        guard let reader else { return [] }
+        guard let countResult = reader.readBytes(key: "FNum"),
               let count = SMCBridge.ui8(countResult.bytes),
               count > 0 else { return [] }
 
         return (0..<min(count, 9)).compactMap { index in
             let suffix = String(index)
-            guard let curResult = bridge.readBytes(key: "F\(suffix)Ac"),
-                  let maxResult = bridge.readBytes(key: "F\(suffix)Mx"),
+            guard let curResult = reader.readBytes(key: "F\(suffix)Ac"),
+                  let maxResult = reader.readBytes(key: "F\(suffix)Mx"),
                   let current = SMCBridge.decodeFloat(curResult),
                   let maximum = SMCBridge.decodeFloat(maxResult),
                   maximum > 0 else { return nil }

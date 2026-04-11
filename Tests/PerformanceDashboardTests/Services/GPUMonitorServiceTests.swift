@@ -4,7 +4,7 @@ import Testing
 struct GPUMonitorServiceTests {
     @Test func sample_doesNotCrash() {
         // May return nil if no IOAccelerator is accessible in the test environment.
-        let usage = GPUMonitorService.sample()
+        let usage = GPUMonitorService.readUsage()
         if let usage {
             #expect(usage >= 0)
             #expect(usage <= 1)

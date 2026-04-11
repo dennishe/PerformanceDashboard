@@ -28,15 +28,15 @@ struct MemoryViewModelTests {
     }
 
     @Test func memoryThreshold_normal_belowSeventy() {
-        #expect(MemoryThreshold().level(for: 0.6) == .normal)
+        #expect(MetricThresholds.memory.level(for: 0.6) == .normal)
     }
 
     @Test func memoryThreshold_warning_betweenSeventyAndNinety() {
-        #expect(MemoryThreshold().level(for: 0.8) == .warning)
+        #expect(MetricThresholds.memory.level(for: 0.8) == .warning)
     }
 
     @Test func memoryThreshold_critical_aboveNinety() {
-        #expect(MemoryThreshold().level(for: 0.95) == .critical)
+        #expect(MetricThresholds.memory.level(for: 0.95) == .critical)
     }
 
     @Test func stop_haltsUpdates() async {

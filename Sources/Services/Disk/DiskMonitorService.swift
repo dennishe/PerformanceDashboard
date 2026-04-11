@@ -1,7 +1,7 @@
 import Foundation
 
 /// Snapshot of disk usage for the boot volume.
-public struct DiskSnapshot: Sendable {
+public struct DiskSnapshot: MetricSnapshot {
     /// Used capacity as a fraction in [0, 1].
     public let usage: Double
     /// Total capacity in bytes.
@@ -13,18 +13,11 @@ public struct DiskSnapshot: Sendable {
 /// Monitors boot-volume disk usage via `URLResourceValues`.
 public final class DiskMonitorService: PollingMonitorBase<DiskSnapshot> {
     @MonitorActor
-    override public func poll(continuation: AsyncStream<DiskSnapshot>.Continuation) async {
-        var nextPoll = PollingCadence.clock.now
-        while !Task.isCancelled {
-            if let snapshot = DiskMonitorService.sample() {
-                continuation.yield(snapshot)
-            }
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-        }
+    override public func sample() async -> DiskSnapshot? {
+        DiskMonitorService.readSnapshot()
     }
 
-    nonisolated static func sample() -> DiskSnapshot? {
+    nonisolated static func readSnapshot() -> DiskSnapshot? {
         let url = URL(fileURLWithPath: "/")
         guard let values = try? url.resourceValues(forKeys: [
             .volumeTotalCapacityKey,

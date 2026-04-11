@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 /// Snapshot of network throughput at a point in time.
-public struct NetworkSnapshot: Sendable {
+public struct NetworkSnapshot: MetricSnapshot {
     /// Bytes received per second across all active interfaces.
     public let bytesInPerSecond: Double
     /// Bytes sent per second across all active interfaces.
@@ -11,19 +11,25 @@ public struct NetworkSnapshot: Sendable {
 
 /// Monitors network throughput by diffing `getifaddrs` byte counters.
 public final class NetworkMonitorService: PollingMonitorBase<NetworkSnapshot> {
+    @MonitorActor private var previousCounters: (UInt64, UInt64) = (0, 0)
+
     @MonitorActor
-    override public func poll(continuation: AsyncStream<NetworkSnapshot>.Continuation) async {
-        var previous = NetworkMonitorService.counters()
-        var nextPoll = PollingCadence.initialDeadline()
-        while !Task.isCancelled {
-            do { try await PollingCadence.sleep(until: nextPoll) } catch { break }
-            let current = NetworkMonitorService.counters()
-            let inBytes  = Double(max(0, Int64(bitPattern: current.0) - Int64(bitPattern: previous.0)))
-            let outBytes = Double(max(0, Int64(bitPattern: current.1) - Int64(bitPattern: previous.1)))
-            continuation.yield(NetworkSnapshot(bytesInPerSecond: inBytes, bytesOutPerSecond: outBytes))
-            previous = current
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
-        }
+    override public func setUp() {
+        previousCounters = NetworkMonitorService.counters()
+    }
+
+    @MonitorActor
+    override public func initialPollDeadline() -> ContinuousClock.Instant {
+        PollingCadence.initialDeadline()
+    }
+
+    @MonitorActor
+    override public func sample() async -> NetworkSnapshot? {
+        let current = NetworkMonitorService.counters()
+        let inBytes = Double(max(0, Int64(bitPattern: current.0) - Int64(bitPattern: previousCounters.0)))
+        let outBytes = Double(max(0, Int64(bitPattern: current.1) - Int64(bitPattern: previousCounters.1)))
+        previousCounters = current
+        return NetworkSnapshot(bytesInPerSecond: inBytes, bytesOutPerSecond: outBytes)
     }
 
     /// Returns (totalBytesIn, totalBytesOut) across all non-loopback interfaces.

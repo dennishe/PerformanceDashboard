@@ -1,25 +1,22 @@
 import SwiftUI
 
+public struct WirelessSnapshot: MetricSnapshot {
+    public let wifi: WiFiSnapshot
+    public let bluetooth: BluetoothSnapshot
+
+    public init(wifi: WiFiSnapshot, bluetooth: BluetoothSnapshot) {
+        self.wifi = wifi
+        self.bluetooth = bluetooth
+    }
+}
+
 /// Presents combined Wi-Fi and Bluetooth state.
 /// Consumes `WiFiMonitorService` and `BluetoothMonitorService` independently (SRP).
 @MainActor
 @Observable
-public final class WirelessViewModel {
+public final class WirelessViewModel: MonitorViewModelBase<WirelessSnapshot> {
     private var wifiSnapshot = WiFiSnapshot(ssid: nil, rssi: nil, on: false)
     private var bluetoothSnapshot = BluetoothSnapshot(connectedCount: 0, on: false)
-
-    public private(set) var tileModel = MetricTileModel(
-        title: "Wireless",
-        value: "Wi-Fi Off",
-        gaugeValue: nil,
-        history: Constants.prefilledHistory,
-        thresholdLevel: .inactive,
-        subtitle: "BT Off",
-        systemImage: "wifi"
-    )
-
-    public private(set) var history: [Double] = Constants.prefilledHistory
-    private var extendedHistory: [Double] = []
 
     public var wifiSSID: String? { wifiSnapshot.ssid }
     public var wifiRSSI: Int? { wifiSnapshot.rssi }
@@ -42,88 +39,40 @@ public final class WirelessViewModel {
 
     public var thresholdLevel: ThresholdLevel {
         guard wifiOn, wifiRSSI != nil else { return .inactive }
-        return WirelessThreshold().level(for: gaugeValue ?? 0)
+        return MetricThresholds.wireless.level(for: gaugeValue ?? 0)
     }
 
-    private let wifiMonitor: any MetricMonitorProtocol<WiFiSnapshot>
-    private let btMonitor: any MetricMonitorProtocol<BluetoothSnapshot>
-    private var wifiTask: Task<Void, Never>?
-    private var btTask: Task<Void, Never>?
-
-    public init(
-        wifiMonitor: some MetricMonitorProtocol<WiFiSnapshot>,
-        btMonitor: some MetricMonitorProtocol<BluetoothSnapshot>
+    override public init(
+        monitor: some MetricMonitorProtocol<WirelessSnapshot>,
+        batcher: any UpdateScheduling = DashboardUpdateBatcher.shared
     ) {
-        self.wifiMonitor = wifiMonitor
-        self.btMonitor = btMonitor
+        super.init(monitor: monitor, batcher: batcher)
     }
 
-    public func start() {
-        wifiTask = Task { [weak self] in
-            guard let self else { return }
-            for await snapshot in wifiMonitor.stream() {
-                DashboardUpdateBatcher.shared.enqueue(owner: self, lane: .wifi) { [weak self] in
-                    self?.receiveWiFi(snapshot)
-                }
-            }
-        }
-        btTask = Task { [weak self] in
-            guard let self else { return }
-            for await snapshot in btMonitor.stream() {
-                DashboardUpdateBatcher.shared.enqueue(owner: self, lane: .bluetooth) { [weak self] in
-                    self?.receiveBluetooth(snapshot)
-                }
-            }
-        }
-    }
-
-    public func stop() {
-        wifiTask?.cancel()
-        btTask?.cancel()
-        DashboardUpdateBatcher.shared.cancel(owner: self)
-        wifiMonitor.stop()
-        btMonitor.stop()
-    }
-
-    private func receiveWiFi(_ snapshot: WiFiSnapshot) {
-        wifiSnapshot = snapshot
-        let normalized = snapshot.rssi.map(Self.normaliseRSSI) ?? 0
-        history = ringBufferAppending(history, value: normalized, maxCount: Constants.historySamples)
-        extendedHistory = ringBufferAppending(extendedHistory, value: normalized,
-                                              maxCount: Constants.extendedHistorySamples)
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                signalLabel: signalLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                thresholdLevel: thresholdLevel,
-                bluetoothLabel: bluetoothLabel
-            )
+    public convenience init(
+        wifiMonitor: some MetricMonitorProtocol<WiFiSnapshot>,
+        btMonitor: some MetricMonitorProtocol<BluetoothSnapshot>,
+        batcher: any UpdateScheduling = DashboardUpdateBatcher.shared
+    ) {
+        self.init(
+            monitor: ZipMonitor(left: wifiMonitor, right: btMonitor) { wifi, bluetooth in
+                WirelessSnapshot(wifi: wifi, bluetooth: bluetooth)
+            },
+            batcher: batcher
         )
     }
 
-    private func receiveBluetooth(_ snapshot: BluetoothSnapshot) {
-        bluetoothSnapshot = snapshot
-        assignIfChanged(
-            &tileModel,
-            to: Self.makeTileModel(
-                signalLabel: signalLabel,
-                gaugeValue: gaugeValue,
-                history: history,
-                thresholdLevel: thresholdLevel,
-                bluetoothLabel: bluetoothLabel
-            )
-        )
+    override public func receive(_ snapshot: WirelessSnapshot) {
+        let didWiFiChange = snapshot.wifi != wifiSnapshot
+        wifiSnapshot = snapshot.wifi
+        bluetoothSnapshot = snapshot.bluetooth
+
+        if didWiFiChange {
+            appendHistory(snapshot.wifi.rssi.map(Self.normaliseRSSI) ?? 0)
+        }
     }
 
-    private static func makeTileModel(
-        signalLabel: String,
-        gaugeValue: Double?,
-        history: [Double],
-        thresholdLevel: ThresholdLevel,
-        bluetoothLabel: String
-    ) -> MetricTileModel {
+    override public func makeTileModel() -> MetricTileModel {
         MetricTileModel(
             title: "Wireless",
             value: signalLabel,

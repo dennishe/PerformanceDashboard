@@ -2,6 +2,15 @@ import Testing
 @testable import PerformanceDashboard
 
 struct FanMonitorServiceTests {
+    private func floatBytes(_ value: Float) -> [UInt8] {
+        let bitPattern = value.bitPattern
+        return [
+            UInt8(bitPattern & 0xFF),
+            UInt8((bitPattern >> 8) & 0xFF),
+            UInt8((bitPattern >> 16) & 0xFF),
+            UInt8((bitPattern >> 24) & 0xFF)
+        ]
+    }
 
     // MARK: - FanReading
 
@@ -46,6 +55,20 @@ struct FanMonitorServiceTests {
     @Test func sample_returnsEmpty_whenBridgeIsNil() {
         let result = FanMonitorService.sample(nil)
         #expect(result.isEmpty)
+    }
+
+    @Test func sample_readsFanValues_fromInjectedReader() {
+        let floatType = SMCBridge.fourCC("flt ") ?? 0
+        let reader = MockSMCReader(readings: [
+            "FNum": (dataType: 0, bytes: [1]),
+            "F0Ac": (dataType: floatType, bytes: floatBytes(2_000)),
+            "F0Mx": (dataType: floatType, bytes: floatBytes(4_000))
+        ])
+
+        let result = FanMonitorService.sample(reader)
+
+        #expect(result.count == 1)
+        #expect(result[0] == FanReading(current: 2_000, max: 4_000))
     }
 
     // MARK: - Service lifecycle
