@@ -10,29 +10,48 @@ public struct AcceleratorSnapshot: MetricSnapshot {
 /// Uses two-sample delta energy-model data; only meaningful on Apple Silicon.
 public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnapshot> {
     #if arch(arm64)
-    /// Injected sampler; defaults to `PMPSampler.shared` when the stream starts.
-    /// Setting this before `stream()` injects a mock for testing.
-    @MonitorActor var sampler: PMPSampler = .shared
-    @MonitorActor private var state: ANEState?
+    private let makeSampler: @MonitorActor @Sendable () -> any PMPSampling
+    private let extractUsage: @Sendable (CFDictionary, Double) -> (usage: Double?, maxDelta: Double)
+
+    @MonitorActor private var sampler: (any PMPSampling)?
+    @MonitorActor private var maxDelta = 1.0
+
+    override public init() {
+        makeSampler = { PMPSampler.shared }
+        extractUsage = ANEUsageExtractor.extract(from:currentMaxDelta:)
+        super.init()
+    }
+
+    init(
+        makeSampler: @escaping @MonitorActor @Sendable () -> any PMPSampling,
+        extractUsage: @escaping @Sendable (CFDictionary, Double) -> (usage: Double?, maxDelta: Double) =
+            ANEUsageExtractor.extract(from:currentMaxDelta:)
+    ) {
+        self.makeSampler = makeSampler
+        self.extractUsage = extractUsage
+        super.init()
+    }
     #endif
 
     @MonitorActor
     override public func setUp() {
         #if arch(arm64)
+        let sampler = makeSampler()
         sampler.setUp()
-        state = ANEState(sampler: sampler)
+        self.sampler = sampler
+        maxDelta = 1.0
         #endif
     }
 
     @MonitorActor
     override public func sample() async -> AcceleratorSnapshot? {
         #if arch(arm64)
-        guard var state else {
+        guard let delta = sampler?.nextDelta() else {
             return AcceleratorSnapshot(aneUsage: nil)
         }
-        let usage = state.nextUsage()
-        self.state = state
-        return AcceleratorSnapshot(aneUsage: usage)
+        let result = extractUsage(delta, maxDelta)
+        maxDelta = result.maxDelta
+        return AcceleratorSnapshot(aneUsage: result.usage)
         #else
         return AcceleratorSnapshot(aneUsage: nil)
         #endif
@@ -42,51 +61,70 @@ public final class AcceleratorMonitorService: PollingMonitorBase<AcceleratorSnap
 // MARK: – IOReport state (ARM64 only)
 
 #if arch(arm64)
-/// Extracts ANE utilisation from the shared `PMPSampler` delta.
-///
-/// Energy-model delta values are normalised against a running maximum that starts
-/// at `initialMaxDelta` (calibrated for M1) and grows if a higher value is observed.
-/// This gives a reasonable approximation of relative ANE utilisation.
-private struct ANEState {
-    /// Starting normalisation ceiling. Grows if exceeded; fully adaptive.
-    private static let initialMaxDelta: Double = 1
+struct ANEChannelSample: Sendable, Equatable {
+    let name: String?
+    let value: Int64
+}
 
-    private var maxDelta: Double = ANEState.initialMaxDelta
-    private let sampler: PMPSampler
-
-    init(sampler: PMPSampler) {
-        self.sampler = sampler
+enum ANEUsageExtractor {
+    static func extract(
+        from delta: CFDictionary,
+        currentMaxDelta: Double
+    ) -> (usage: Double?, maxDelta: Double) {
+        extract(from: channelSamples(from: delta), currentMaxDelta: currentMaxDelta)
     }
 
-    // MARK: Sampling
-
-    /// Reads the next delta from the injected PMPSampler and returns ANE utilisation in [0, 1].
-    @MonitorActor mutating func nextUsage() -> Double? {
-        guard let delta = sampler.nextDelta() else { return nil }
-        return extractANE(from: delta)
-    }
-
-    // MARK: – Private helpers
-
-    private mutating func extractANE(from delta: CFDictionary) -> Double? {
+    static func channelSamples(from delta: CFDictionary) -> [ANEChannelSample] {
         let nsDict = delta as NSDictionary
-        guard let array = nsDict["IOReportChannels"] as? [NSDictionary] else { return nil }
+        guard let array = nsDict["IOReportChannels"] as? [NSDictionary] else { return [] }
 
+        return array.map { channel in
+            ANEChannelSample(
+                name: channelName(from: channel),
+                value: integerValue(from: channel)
+            )
+        }
+    }
+
+    static func extract(
+        from samples: [ANEChannelSample],
+        currentMaxDelta: Double
+    ) -> (usage: Double?, maxDelta: Double) {
         var total: Int64 = 0
         var found = false
-        for channel in array {
-            // Use IOReportChannelGetChannelName — the name is NOT in a plain dict key.
-            guard IOReport.channelName(channel as CFDictionary) == "ANE" else { continue }
-            let raw = IOReport.integerValue(channel as CFDictionary)
+        for channel in samples {
+            guard channel.name == "ANE" else { continue }
+            let raw = channel.value
             // INT64_MIN is the sentinel for "privileged / unavailable".
             guard raw != Int64.min, raw >= 0 else { continue }
             total += raw
             found = true
         }
-        guard found else { return nil }
+        guard found else { return (nil, currentMaxDelta) }
         let value = Double(total)
-        if value > maxDelta { maxDelta = value }
-        return maxDelta > 0 ? min(1.0, max(0.0, value / maxDelta)) : nil
+        let maxDelta = max(currentMaxDelta, value)
+        let usage = maxDelta > 0 ? min(1.0, max(0.0, value / maxDelta)) : nil
+        return (usage, maxDelta)
+    }
+
+    private static func channelName(from channel: NSDictionary) -> String? {
+        if let legend = channel["LegendChannel"] as? [Any], legend.count > 2 {
+            return legend[2] as? String
+        }
+
+        return IOReport.channelName(channel as CFDictionary)
+    }
+
+    private static func integerValue(from channel: NSDictionary) -> Int64 {
+        if let number = channel["SimpleValue"] as? NSNumber {
+            return number.int64Value
+        }
+
+        if let number = channel["Value"] as? NSNumber {
+            return number.int64Value
+        }
+
+        return IOReport.integerValue(channel as CFDictionary)
     }
 }
 #endif

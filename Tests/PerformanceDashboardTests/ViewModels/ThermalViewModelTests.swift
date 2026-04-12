@@ -148,4 +148,43 @@ struct ThermalViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.cpuCelsius == cpuBeforeStop)
     }
+
+    @Test func tileModel_marksUnavailableSensors_whenCpuTemperatureIsMissing() async {
+        let monitor = MockMonitor<ThermalSnapshot>()
+        monitor.snapshots = [ThermalSnapshot(cpuCelsius: nil, gpuCelsius: 44.0)]
+        let viewModel = ThermalViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.tileModel.gaugeColorProfile == .inactive)
+        #expect(viewModel.tileModel.unavailableReason == "Temperature sensor unavailable")
+        #expect(viewModel.tileModel.subtitle == "GPU 44.0°C")
+    }
+
+    @Test func detailModel_includesIndividualSensorReadings() async {
+        let monitor = MockMonitor<ThermalSnapshot>()
+        monitor.snapshots = [
+            ThermalSnapshot(
+                cpuCelsius: 68.0,
+                gpuCelsius: 52.0,
+                sensorReadings: [
+                    ThermalReading(label: "CPU Proximity", celsius: 68.0),
+                    ThermalReading(label: "GPU Die", celsius: 52.0)
+                ]
+            )
+        ]
+        let viewModel = ThermalViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.detailModel.title == "Temperature")
+        #expect(viewModel.detailModel.primaryValue == "68.0°C")
+        #expect(viewModel.detailModel.stats.count == 2)
+        #expect(viewModel.detailModel.stats[0].label == "CPU Proximity")
+        #expect(viewModel.detailModel.stats[0].value == "68.0°C")
+        #expect(viewModel.detailModel.stats[1].label == "GPU Die")
+        #expect(viewModel.detailModel.stats[1].value == "52.0°C")
+    }
 }

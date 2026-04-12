@@ -1,8 +1,49 @@
 import Foundation
 
+struct PollingScheduler: Sendable {
+    typealias Instant = ContinuousClock.Instant
+
+    private let initialDeadlineProvider: @Sendable (Duration) -> Instant
+    private let nextDeadlineProvider: @Sendable (Instant, Duration) -> Instant
+    private let sleepProvider: @Sendable (Instant) async throws -> Void
+
+    init(
+        initialDeadline: @escaping @Sendable (Duration) -> Instant,
+        nextDeadline: @escaping @Sendable (Instant, Duration) -> Instant,
+        sleepUntil: @escaping @Sendable (Instant) async throws -> Void
+    ) {
+        initialDeadlineProvider = initialDeadline
+        nextDeadlineProvider = nextDeadline
+        sleepProvider = sleepUntil
+    }
+
+    func initialDeadline(after interval: Duration) -> Instant {
+        initialDeadlineProvider(interval)
+    }
+
+    func nextDeadline(after deadline: Instant, interval: Duration) -> Instant {
+        nextDeadlineProvider(deadline, interval)
+    }
+
+    func sleep(until deadline: Instant) async throws {
+        try await sleepProvider(deadline)
+    }
+}
+
 enum PollingCadence {
     static let clock = ContinuousClock()
     static let tolerance: Duration = .milliseconds(25)
+    static let live = PollingScheduler(
+        initialDeadline: { interval in
+            initialDeadline(after: interval)
+        },
+        nextDeadline: { deadline, interval in
+            nextDeadline(after: deadline, interval: interval)
+        },
+        sleepUntil: { deadline in
+            try await sleep(until: deadline)
+        }
+    )
 
     static func initialDeadline() -> ContinuousClock.Instant {
         initialDeadline(after: Constants.pollingInterval)

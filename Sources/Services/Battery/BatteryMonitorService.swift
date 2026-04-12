@@ -2,6 +2,53 @@ import Foundation
 import IOKit
 import IOKit.ps
 
+protocol BatteryPowerSourceProviding {
+    func description() -> [String: Any]?
+}
+
+protocol BatteryRegistryProviding {
+    func batteryInfo() -> (cycleCount: Int?, health: Double?)
+}
+
+private struct LiveBatteryPowerSourceProvider: BatteryPowerSourceProviding {
+    func description() -> [String: Any]? {
+        guard let psInfo = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sources = IOPSCopyPowerSourcesList(psInfo)?.takeRetainedValue() as? [CFTypeRef],
+              !sources.isEmpty,
+              let descRef = IOPSGetPowerSourceDescription(psInfo, sources[0]),
+              let desc = descRef.takeUnretainedValue() as? [String: Any]
+        else {
+            return nil
+        }
+
+        return desc
+    }
+}
+
+private struct LiveBatteryRegistryProvider: BatteryRegistryProviding {
+    func batteryInfo() -> (cycleCount: Int?, health: Double?) {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault,
+                                                  IOServiceMatching("AppleSmartBattery"))
+        guard service != IO_OBJECT_NULL else { return (nil, nil) }
+        defer { IOObjectRelease(service) }
+
+        var props: Unmanaged<CFMutableDictionary>?
+        guard IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0)
+                == KERN_SUCCESS,
+              let dict = props?.takeRetainedValue() as? [String: Any]
+        else { return (nil, nil) }
+
+        let cycles = dict["CycleCount"] as? Int
+        let designCap = dict["DesignCapacity"] as? Int
+        let currentMax = dict["MaxCapacity"] as? Int
+        var health: Double?
+        if let designCap, let currentMax, designCap > 0 {
+            health = min(1.0, Double(currentMax) / Double(designCap))
+        }
+        return (cycles, health)
+    }
+}
+
 /// Snapshot of battery and power-source state.
 public struct BatterySnapshot: MetricSnapshot {
     /// `false` on desktop Macs with no internal battery.
@@ -35,16 +82,18 @@ public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
     // MARK: - Sampling
 
     nonisolated static func readSnapshot() -> BatterySnapshot {
-        guard let psInfo = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-              let sources = IOPSCopyPowerSourcesList(psInfo)?.takeRetainedValue() as? [CFTypeRef],
-              !sources.isEmpty,
-              let descRef = IOPSGetPowerSourceDescription(psInfo, sources[0]),
-              let desc = descRef.takeUnretainedValue() as? [String: Any]
-        else {
-            return BatterySnapshot(
-                isPresent: false, chargeFraction: 0, isCharging: false,
-                onAC: true, timeToEmptyMinutes: nil, cycleCount: nil, healthFraction: nil
-            )
+        readSnapshot(
+            powerSourceProvider: LiveBatteryPowerSourceProvider(),
+            registryProvider: LiveBatteryRegistryProvider()
+        )
+    }
+
+    nonisolated static func readSnapshot(
+        powerSourceProvider: some BatteryPowerSourceProviding,
+        registryProvider: some BatteryRegistryProviding
+    ) -> BatterySnapshot {
+        guard let desc = powerSourceProvider.description() else {
+            return unavailableSnapshot()
         }
 
         let isPresent = desc[kIOPSIsPresentKey] as? Bool ?? false
@@ -56,7 +105,7 @@ public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
         let onAC = state == kIOPSACPowerValue
         let tte = desc[kIOPSTimeToEmptyKey] as? Int
 
-        let (cycleCount, healthFraction) = ioRegistryBatteryInfo()
+        let (cycleCount, healthFraction) = registryProvider.batteryInfo()
 
         return BatterySnapshot(
             isPresent: isPresent,
@@ -69,26 +118,15 @@ public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
         )
     }
 
-    /// Reads `CycleCount` and `DesignCapacity` from the IORegistry `AppleSmartBattery` node.
-    nonisolated private static func ioRegistryBatteryInfo() -> (cycleCount: Int?, health: Double?) {
-        let service = IOServiceGetMatchingService(kIOMainPortDefault,
-                                                  IOServiceMatching("AppleSmartBattery"))
-        guard service != IO_OBJECT_NULL else { return (nil, nil) }
-        defer { IOObjectRelease(service) }
-
-        var props: Unmanaged<CFMutableDictionary>?
-        guard IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0)
-                == KERN_SUCCESS,
-              let dict = props?.takeRetainedValue() as? [String: Any]
-        else { return (nil, nil) }
-
-        let cycles = dict["CycleCount"] as? Int
-        let designCap = dict["DesignCapacity"] as? Int
-        let currentMax = dict["MaxCapacity"] as? Int
-        var health: Double?
-        if let designCap, let currentMax, designCap > 0 {
-            health = min(1.0, Double(currentMax) / Double(designCap))
-        }
-        return (cycles, health)
+    nonisolated private static func unavailableSnapshot() -> BatterySnapshot {
+        BatterySnapshot(
+            isPresent: false,
+            chargeFraction: 0,
+            isCharging: false,
+            onAC: true,
+            timeToEmptyMinutes: nil,
+            cycleCount: nil,
+            healthFraction: nil
+        )
     }
 }

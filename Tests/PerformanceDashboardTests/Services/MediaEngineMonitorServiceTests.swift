@@ -1,7 +1,33 @@
+import Foundation
 import Testing
 @testable import PerformanceDashboard
 
 struct MediaEngineMonitorServiceTests {
+    #if arch(arm64)
+    @MonitorActor
+    private final class MockPMPSampler: PMPSampling {
+        private(set) var setUpCallCount = 0
+        private var deltas: [CFDictionary?]
+
+        init(deltas: [CFDictionary?]) {
+            self.deltas = deltas
+        }
+
+        func setUp() {
+            setUpCallCount += 1
+        }
+
+        func nextDelta() -> CFDictionary? {
+            guard !deltas.isEmpty else { return nil }
+            return deltas.removeFirst()
+        }
+    }
+
+    @MonitorActor
+    private func makeSampler(deltas: [CFDictionary?]) -> MockPMPSampler {
+        MockPMPSampler(deltas: deltas)
+    }
+    #endif
 
     // MARK: - MediaEngineSnapshot
 
@@ -90,4 +116,47 @@ struct MediaEngineMonitorServiceTests {
         service.stop()
         service.stop()
     }
+
+    @Test @MainActor func sample_beforeSetUp_returnsUnavailableSnapshot() async {
+        let service = MediaEngineMonitorService()
+        let snapshot = await service.sample()
+
+        #expect(snapshot == MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil))
+    }
+
+    #if arch(arm64)
+    @Test @MainActor func init_withInjectedSampler_usesDefaultExtractor() async {
+        let delta = [
+            "IOReportChannels": [
+                ["LegendChannel": [0, 0, "AVE"]]
+            ]
+        ] as NSDictionary
+        let sampler = await makeSampler(deltas: [delta as CFDictionary])
+        let service = MediaEngineMonitorService(makeSampler: { sampler })
+
+        await service.setUp()
+        let snapshot = await service.sample()
+
+        #expect(snapshot == MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil))
+    }
+
+    @Test @MainActor func sample_usesInjectedSamplerAndExtractor() async {
+        let expected = MediaEngineSnapshot(encodeMilliwatts: 42, decodeMilliwatts: 21)
+        let emptyDelta = [:] as CFDictionary
+        let sampler = await makeSampler(deltas: [emptyDelta, nil])
+        let service = MediaEngineMonitorService(
+            makeSampler: { sampler },
+            extractSnapshot: { _ in expected }
+        )
+
+        await service.setUp()
+        let firstSnapshot = await service.sample()
+        let secondSnapshot = await service.sample()
+        let setUpCallCount = await sampler.setUpCallCount
+
+        #expect(setUpCallCount == 1)
+        #expect(firstSnapshot == expected)
+        #expect(secondSnapshot == MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil))
+    }
+    #endif
 }

@@ -1,6 +1,12 @@
 #if arch(arm64)
 import Foundation
 
+@MonitorActor
+protocol PMPSampling: AnyObject {
+    func setUp()
+    func nextDelta() -> CFDictionary?
+}
+
 /// A single shared IOReport subscription to the `PMP / Energy Counters` group.
 ///
 /// `AcceleratorMonitorService` and `MediaEngineMonitorService` both read from
@@ -59,4 +65,6 @@ final class PMPSampler {
         return cachedDelta
     }
 }
+
+extension PMPSampler: PMPSampling {}
 #endif

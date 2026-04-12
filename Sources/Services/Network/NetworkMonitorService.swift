@@ -1,6 +1,44 @@
 import Darwin
 import Foundation
 
+struct NetworkInterfaceCounter: Sendable, Equatable {
+    let name: String
+    let bytesIn: UInt64
+    let bytesOut: UInt64
+}
+
+protocol NetworkInterfaceCounterProviding {
+    func interfaceCounters() -> [NetworkInterfaceCounter]?
+}
+
+private struct LiveNetworkInterfaceCounterProvider: NetworkInterfaceCounterProviding {
+    func interfaceCounters() -> [NetworkInterfaceCounter]? {
+        var ifaddrPointer: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddrPointer) == 0, let head = ifaddrPointer else { return nil }
+        defer { freeifaddrs(head) }
+
+        var result: [NetworkInterfaceCounter] = []
+        var cursor: UnsafeMutablePointer<ifaddrs>? = head
+        while let iface = cursor {
+            let name = String(cString: iface.pointee.ifa_name)
+            if iface.pointee.ifa_addr?.pointee.sa_family == UInt8(AF_LINK),
+               let data = iface.pointee.ifa_data {
+                let networkData = data.assumingMemoryBound(to: if_data.self)
+                result.append(
+                    NetworkInterfaceCounter(
+                        name: name,
+                        bytesIn: UInt64(networkData.pointee.ifi_ibytes),
+                        bytesOut: UInt64(networkData.pointee.ifi_obytes)
+                    )
+                )
+            }
+            cursor = iface.pointee.ifa_next
+        }
+
+        return result
+    }
+}
+
 /// Snapshot of network throughput at a point in time.
 public struct NetworkSnapshot: MetricSnapshot {
     /// Bytes received per second across all active interfaces.
@@ -19,41 +57,40 @@ public final class NetworkMonitorService: PollingMonitorBase<NetworkSnapshot> {
     }
 
     @MonitorActor
-    override public func initialPollDeadline() -> ContinuousClock.Instant {
-        PollingCadence.initialDeadline()
-    }
-
-    @MonitorActor
     override public func sample() async -> NetworkSnapshot? {
         let current = NetworkMonitorService.counters()
-        let inBytes = Double(max(0, Int64(bitPattern: current.0) - Int64(bitPattern: previousCounters.0)))
-        let outBytes = Double(max(0, Int64(bitPattern: current.1) - Int64(bitPattern: previousCounters.1)))
+        let snapshot = NetworkMonitorService.snapshot(current: current, previous: previousCounters)
         previousCounters = current
-        return NetworkSnapshot(bytesInPerSecond: inBytes, bytesOutPerSecond: outBytes)
+        return snapshot
     }
 
     /// Returns (totalBytesIn, totalBytesOut) across all non-loopback interfaces.
     nonisolated static func counters() -> (UInt64, UInt64) {
-        var ifaddrPointer: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddrPointer) == 0, let head = ifaddrPointer else { return (0, 0) }
-        defer { freeifaddrs(head) }
+        counters(provider: LiveNetworkInterfaceCounterProvider())
+    }
 
+    nonisolated static func counters(
+        provider: some NetworkInterfaceCounterProviding
+    ) -> (UInt64, UInt64) {
+        guard let interfaceCounters = provider.interfaceCounters() else { return (0, 0) }
         var bytesIn: UInt64 = 0
         var bytesOut: UInt64 = 0
-        var cursor: UnsafeMutablePointer<ifaddrs>? = head
-        while let iface = cursor {
-            let name = String(cString: iface.pointee.ifa_name)
+        for counter in interfaceCounters {
             // Include only physical / VPN interfaces; skip loopback and others.
-            if (name.hasPrefix("en") || name.hasPrefix("utun")) &&
-                iface.pointee.ifa_addr?.pointee.sa_family == UInt8(AF_LINK) {
-                if let data = iface.pointee.ifa_data {
-                    let networkData = data.assumingMemoryBound(to: if_data.self)
-                    bytesIn += UInt64(networkData.pointee.ifi_ibytes)
-                    bytesOut += UInt64(networkData.pointee.ifi_obytes)
-                }
+            if counter.name.hasPrefix("en") || counter.name.hasPrefix("utun") {
+                bytesIn += counter.bytesIn
+                bytesOut += counter.bytesOut
             }
-            cursor = iface.pointee.ifa_next
         }
         return (bytesIn, bytesOut)
+    }
+
+    nonisolated static func snapshot(
+        current: (UInt64, UInt64),
+        previous: (UInt64, UInt64)
+    ) -> NetworkSnapshot {
+        let inBytes = Double(max(0, Int64(bitPattern: current.0) - Int64(bitPattern: previous.0)))
+        let outBytes = Double(max(0, Int64(bitPattern: current.1) - Int64(bitPattern: previous.1)))
+        return NetworkSnapshot(bytesInPerSecond: inBytes, bytesOutPerSecond: outBytes)
     }
 }

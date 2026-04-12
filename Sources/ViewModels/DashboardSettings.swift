@@ -62,6 +62,8 @@ enum DensityPreset: String, CaseIterable, Sendable {
 /// Persists user preferences for tile visibility and layout density.
 @Observable
 final class DashboardSettings {
+    private let userDefaults: UserDefaults
+
     private(set) var hiddenTileIDs: Set<String> {
         didSet { saveHiddenTiles() }
     }
@@ -69,10 +71,11 @@ final class DashboardSettings {
         didSet { saveDensity() }
     }
 
-    init() {
-        hiddenTileIDs = Set(UserDefaults.standard.stringArray(forKey: Keys.hiddenTiles) ?? [])
+    init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        hiddenTileIDs = Set(userDefaults.stringArray(forKey: Keys.hiddenTiles) ?? [])
         densityPreset = DensityPreset(
-            rawValue: UserDefaults.standard.string(forKey: Keys.densityPreset) ?? ""
+            rawValue: userDefaults.string(forKey: Keys.densityPreset) ?? ""
         ) ?? .comfortable
     }
 
@@ -89,11 +92,11 @@ final class DashboardSettings {
     }
 
     private func saveHiddenTiles() {
-        UserDefaults.standard.set(Array(hiddenTileIDs), forKey: Keys.hiddenTiles)
+        userDefaults.set(Array(hiddenTileIDs), forKey: Keys.hiddenTiles)
     }
 
     private func saveDensity() {
-        UserDefaults.standard.set(densityPreset.rawValue, forKey: Keys.densityPreset)
+        userDefaults.set(densityPreset.rawValue, forKey: Keys.densityPreset)
     }
 
     private enum Keys {

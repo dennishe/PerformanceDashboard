@@ -13,61 +13,95 @@ public struct MediaEngineSnapshot: MetricSnapshot {
 /// IOReport group; values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
 public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnapshot> {
     #if arch(arm64)
-    /// Injected sampler; defaults to `PMPSampler.shared` when the stream starts.
-    @MonitorActor var sampler: PMPSampler = .shared
-    @MonitorActor private var state: MediaEngineState?
+    private let makeSampler: @MonitorActor @Sendable () -> any PMPSampling
+    private let extractSnapshot: @Sendable (CFDictionary) -> MediaEngineSnapshot
+    @MonitorActor private var sampler: (any PMPSampling)?
+
+    override public init() {
+        makeSampler = { PMPSampler.shared }
+        extractSnapshot = MediaEngineSnapshotExtractor.snapshot(from:)
+        super.init()
+    }
+
+    init(
+        makeSampler: @escaping @MonitorActor @Sendable () -> any PMPSampling,
+        extractSnapshot: @escaping @Sendable (CFDictionary) -> MediaEngineSnapshot =
+            MediaEngineSnapshotExtractor.snapshot(from:)
+    ) {
+        self.makeSampler = makeSampler
+        self.extractSnapshot = extractSnapshot
+        super.init()
+    }
     #endif
 
     @MonitorActor
     override public func setUp() {
         #if arch(arm64)
+        let sampler = makeSampler()
         sampler.setUp()
-        state = MediaEngineState(sampler: sampler)
+        self.sampler = sampler
         #endif
     }
 
     @MonitorActor
     override public func sample() async -> MediaEngineSnapshot? {
         #if arch(arm64)
-        return state?.nextSnapshot() ?? MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+        guard let delta = sampler?.nextDelta() else {
+            return MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+        }
+        return extractSnapshot(delta)
         #else
         return MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
         #endif
     }
 }
 
-// MARK: - IOReport state (Apple Silicon only)
+// MARK: - IOReport extraction (Apple Silicon only)
 
 #if arch(arm64)
-/// Extracts AVE/VDEC power from the shared `PMPSampler` delta.
-/// The `AVE` (encoder) and `VDEC` (decoder) channels are in `PMP / Energy Counters`;
-/// values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
-private struct MediaEngineState {
-    private let sampler: PMPSampler
+struct MediaEngineChannelSample: Sendable, Equatable {
+    let name: String?
+    let value: Int64
+}
 
-    init(sampler: PMPSampler) {
-        self.sampler = sampler
+enum MediaEngineSnapshotExtractor {
+    /// Extracts AVE/VDEC power from the shared `PMPSampler` delta.
+    /// The `AVE` (encoder) and `VDEC` (decoder) channels are in `PMP / Energy Counters`;
+    /// values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
+    static func snapshot(from delta: CFDictionary) -> MediaEngineSnapshot {
+        snapshot(from: channelSamples(from: delta))
     }
 
-    @MonitorActor func nextSnapshot() -> MediaEngineSnapshot? {
-        guard let delta = sampler.nextDelta() else { return nil }
-        return extract(from: delta)
-    }
-
-    private func extract(from delta: CFDictionary) -> MediaEngineSnapshot {
+    static func channelSamples(from delta: CFDictionary) -> [MediaEngineChannelSample] {
         let nsDict = delta as NSDictionary
         guard let array = nsDict["IOReportChannels"] as? [NSDictionary] else {
-            return MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)
+            return []
         }
+
+        return array.map { channel in
+            MediaEngineChannelSample(
+                name: channelName(from: channel),
+                value: IOReport.integerValue(channel as CFDictionary)
+            )
+        }
+    }
+
+    private static func channelName(from channel: NSDictionary) -> String? {
+        if let legend = channel["LegendChannel"] as? [Any], legend.count > 2 {
+            return legend[2] as? String
+        }
+
+        return IOReport.channelName(channel as CFDictionary)
+    }
+
+    static func snapshot(from samples: [MediaEngineChannelSample]) -> MediaEngineSnapshot {
         var encode = Int64.min
         var decode = Int64.min
-        for channel in array {
-            let name = IOReport.channelName(channel as CFDictionary)
-            let val = IOReport.integerValue(channel as CFDictionary)
-            guard val != Int64.min else { continue }
-            switch name {
-            case "AVE":  encode = encode == Int64.min ? val : encode + val
-            case "VDEC": decode = decode == Int64.min ? val : decode + val
+        for sample in samples {
+            guard sample.value != Int64.min else { continue }
+            switch sample.name {
+            case "AVE":  encode = encode == Int64.min ? sample.value : encode + sample.value
+            case "VDEC": decode = decode == Int64.min ? sample.value : decode + sample.value
             default: break
             }
         }

@@ -5,10 +5,17 @@
 /// cancellation handling. View models should still inject monitors as
 /// `any MetricMonitorProtocol`.
 open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
+    private let scheduler: PollingScheduler
     private var continuation: AsyncStream<Value>.Continuation?
     private var pollingTask: Task<Void, Never>?
 
-    public init() {}
+    public init() {
+        scheduler = PollingCadence.live
+    }
+
+    init(scheduler: PollingScheduler) {
+        self.scheduler = scheduler
+    }
 
     @MainActor
     public func stream() -> AsyncStream<Value> {
@@ -42,7 +49,7 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
         var nextPoll = initialPollDeadline()
         while !Task.isCancelled {
             do {
-                try await PollingCadence.sleep(until: nextPoll)
+                try await scheduler.sleep(until: nextPoll)
             } catch {
                 break
             }
@@ -51,7 +58,7 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
                 continuation.yield(snapshot)
             }
 
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll, interval: interval)
+            nextPoll = scheduler.nextDeadline(after: nextPoll, interval: interval)
         }
     }
 
@@ -66,7 +73,7 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
     /// Override when a service needs to delay the first sample.
     @MonitorActor
     open func initialPollDeadline() -> ContinuousClock.Instant {
-        PollingCadence.initialDeadline(after: pollingInterval())
+        scheduler.initialDeadline(after: pollingInterval())
     }
 
     /// Override when a monitor should run at a different cadence than the default dashboard tick.

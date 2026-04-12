@@ -144,4 +144,51 @@ struct MediaEngineViewModelTests {
         await waitForAsyncUpdates()
         #expect(viewModel.encodeMilliwatts == encBeforeStop)
     }
+
+    @Test func thresholdLevel_warning_andCritical_followNormalizedLoad() async {
+        let warningMonitor = MockMonitor<MediaEngineSnapshot>()
+        warningMonitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 35.0, decodeMilliwatts: 35.0)]
+        let warningViewModel = MediaEngineViewModel(monitor: warningMonitor)
+
+        warningViewModel.start()
+        await waitForAsyncUpdates()
+        #expect(warningViewModel.thresholdLevel == .warning)
+
+        let criticalMonitor = MockMonitor<MediaEngineSnapshot>()
+        criticalMonitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 90.0, decodeMilliwatts: 10.0)]
+        let criticalViewModel = MediaEngineViewModel(monitor: criticalMonitor)
+
+        criticalViewModel.start()
+        await waitForAsyncUpdates()
+        #expect(criticalViewModel.thresholdLevel == .critical)
+    }
+
+    @Test func tileModel_usesInactiveProfile_whenNoChannelsAreAvailable() async {
+        let monitor = MockMonitor<MediaEngineSnapshot>()
+        monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: nil, decodeMilliwatts: nil)]
+        let viewModel = MediaEngineViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.tileModel.title == "Media Engine")
+        #expect(viewModel.tileModel.gaugeColorProfile == .inactive)
+        #expect(viewModel.tileModel.subtitle == "Dec: —")
+        #expect(viewModel.tileModel.value == "—")
+    }
+
+    @Test func detailModel_includesOnlyAvailableEncodeOrDecodeStats() async {
+        let monitor = MockMonitor<MediaEngineSnapshot>()
+        monitor.snapshots = [MediaEngineSnapshot(encodeMilliwatts: 18.0, decodeMilliwatts: nil)]
+        let viewModel = MediaEngineViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.detailModel.title == "Media Engine")
+        #expect(viewModel.detailModel.primaryValue == "18 mW")
+        #expect(viewModel.detailModel.stats.count == 1)
+        #expect(viewModel.detailModel.stats[0].label == "Encode")
+        #expect(viewModel.detailModel.stats[0].value == "18 mW")
+    }
 }

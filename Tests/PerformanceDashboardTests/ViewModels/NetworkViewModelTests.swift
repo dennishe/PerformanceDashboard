@@ -89,4 +89,42 @@ struct NetworkViewModelTests {
         #expect(viewModel.inLabel == "0 KB/s")
         #expect(viewModel.outLabel == "0 KB/s")
     }
+
+    @Test func directionalTileModels_reflectCurrentTrafficAndDirectionMetadata() async {
+        let monitor = MockMonitor<NetworkSnapshot>()
+        monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 12_000_000, bytesOutPerSecond: 34_000_000)]
+        let viewModel = NetworkViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.inTileModel.title == "Net In")
+        #expect(viewModel.inTileModel.systemImage == "arrow.down.circle")
+        #expect(viewModel.inTileModel.value == viewModel.inLabel)
+        #expect(viewModel.inTileModel.gaugeValue == viewModel.inGauge)
+        #expect(viewModel.outTileModel.title == "Net Out")
+        #expect(viewModel.outTileModel.systemImage == "arrow.up.circle")
+        #expect(viewModel.outTileModel.value == viewModel.outLabel)
+        #expect(viewModel.outTileModel.gaugeValue == viewModel.outGauge)
+    }
+
+    @Test func tileModel_andDetailModel_includeCombinedAndDirectionalValues() async {
+        let monitor = MockMonitor<NetworkSnapshot>()
+        monitor.snapshots = [NetworkSnapshot(bytesInPerSecond: 20_000_000, bytesOutPerSecond: 5_000_000)]
+        let viewModel = NetworkViewModel(monitor: monitor)
+
+        viewModel.start()
+        await waitForAsyncUpdates()
+
+        #expect(viewModel.tileModel.title == "Network")
+        #expect(viewModel.tileModel.subtitle == "↓ \(viewModel.inLabel)  ↑ \(viewModel.outLabel)")
+        #expect(viewModel.tileModel.value.contains("/s"))
+        #expect(viewModel.detailModel.title == "Network")
+        #expect(viewModel.detailModel.primaryValue == viewModel.tileModel.value)
+        #expect(viewModel.detailModel.stats.count == 2)
+        #expect(viewModel.detailModel.stats[0].label == "Download ↓")
+        #expect(viewModel.detailModel.stats[0].value == viewModel.inLabel)
+        #expect(viewModel.detailModel.stats[1].label == "Upload ↑")
+        #expect(viewModel.detailModel.stats[1].value == viewModel.outLabel)
+    }
 }

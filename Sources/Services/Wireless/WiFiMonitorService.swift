@@ -1,6 +1,26 @@
 import Foundation
 import CoreWLAN
 
+struct WiFiInterfaceState: Sendable, Equatable {
+    let ssid: String?
+    let rssi: Int
+    let on: Bool
+}
+
+protocol WiFiStateProviding: Sendable {
+    func currentState() -> WiFiInterfaceState?
+}
+
+private struct LiveWiFiStateProvider: WiFiStateProviding {
+    func currentState() -> WiFiInterfaceState? {
+        guard let iface = CWWiFiClient.shared().interface() else {
+            return nil
+        }
+
+        return WiFiInterfaceState(ssid: iface.ssid(), rssi: iface.rssiValue(), on: iface.powerOn())
+    }
+}
+
 /// Snapshot of Wi-Fi interface state at a point in time.
 public struct WiFiSnapshot: MetricSnapshot {
     /// Current SSID; `nil` when disconnected or the radio is off.
@@ -14,20 +34,37 @@ public struct WiFiSnapshot: MetricSnapshot {
 /// Polls Wi-Fi status via CoreWLAN.
 /// CoreWLAN reads are thread-safe and run on `@MonitorActor`.
 public final class WiFiMonitorService: PollingMonitorBase<WiFiSnapshot> {
-    @MonitorActor
-    override public func sample() async -> WiFiSnapshot? {
-        sample(CWWiFiClient.shared())
+    private let provider: any WiFiStateProviding
+
+    override public init() {
+        provider = LiveWiFiStateProvider()
+        super.init()
     }
 
-    nonisolated private func sample(_ client: CWWiFiClient) -> WiFiSnapshot {
-        guard let iface = client.interface() else {
+    init(provider: any WiFiStateProviding) {
+        self.provider = provider
+        super.init()
+    }
+
+    @MonitorActor
+    override public func sample() async -> WiFiSnapshot? {
+        WiFiMonitorService.sample(provider: provider)
+    }
+
+    nonisolated static func sample(provider: some WiFiStateProviding) -> WiFiSnapshot {
+        snapshot(state: provider.currentState())
+    }
+
+    nonisolated static func snapshot(state: WiFiInterfaceState?) -> WiFiSnapshot {
+        guard let state else {
             return WiFiSnapshot(ssid: nil, rssi: nil, on: false)
         }
-        let on = iface.powerOn()
-        guard on, let ssid = iface.ssid() else {
-            return WiFiSnapshot(ssid: nil, rssi: nil, on: on)
+
+        guard state.on, let ssid = state.ssid else {
+            return WiFiSnapshot(ssid: nil, rssi: nil, on: state.on)
         }
-        let rssi = iface.rssiValue()
-        return WiFiSnapshot(ssid: ssid, rssi: rssi != 0 ? rssi : nil, on: true)
+
+        let rssi = state.rssi != 0 ? state.rssi : nil
+        return WiFiSnapshot(ssid: ssid, rssi: rssi, on: true)
     }
 }

@@ -2,6 +2,14 @@ import Testing
 @testable import PerformanceDashboard
 
 struct NetworkMonitorServiceTests {
+    private struct MockNetworkInterfaceCounterProvider: NetworkInterfaceCounterProviding {
+        let counters: [NetworkInterfaceCounter]?
+
+        func interfaceCounters() -> [NetworkInterfaceCounter]? {
+            counters
+        }
+    }
+
     @Test func counters_returnsTupleOfUInt64() {
         let (bytesIn, bytesOut) = NetworkMonitorService.counters()
         // Values may be 0 in a restricted environment but must be non-negative UInt64.
@@ -74,5 +82,45 @@ struct NetworkMonitorServiceTests {
         _ = service2.stream()
         service1.stop()
         service2.stop()
+    }
+
+    @Test func counters_filtersToPhysicalAndVpnInterfaces() {
+        let result = NetworkMonitorService.counters(
+            provider: MockNetworkInterfaceCounterProvider(counters: [
+                NetworkInterfaceCounter(name: "en0", bytesIn: 100, bytesOut: 50),
+                NetworkInterfaceCounter(name: "utun3", bytesIn: 40, bytesOut: 10),
+                NetworkInterfaceCounter(name: "lo0", bytesIn: 500, bytesOut: 500),
+                NetworkInterfaceCounter(name: "awdl0", bytesIn: 20, bytesOut: 20)
+            ])
+        )
+
+        #expect(result.0 == 140)
+        #expect(result.1 == 60)
+    }
+
+    @Test func counters_returnsZeroWhenProviderFails() {
+        let result = NetworkMonitorService.counters(
+            provider: MockNetworkInterfaceCounterProvider(counters: nil)
+        )
+
+        #expect(result == (0, 0))
+    }
+
+    @Test func snapshot_computesDeltasFromCounterPairs() {
+        let snapshot = NetworkMonitorService.snapshot(
+            current: (4_096, 2_048),
+            previous: (1_024, 512)
+        )
+
+        #expect(snapshot == NetworkSnapshot(bytesInPerSecond: 3_072, bytesOutPerSecond: 1_536))
+    }
+
+    @Test func snapshot_clampsNegativeDeltasToZero() {
+        let snapshot = NetworkMonitorService.snapshot(
+            current: (1_000, 1_000),
+            previous: (2_000, 3_000)
+        )
+
+        #expect(snapshot == NetworkSnapshot(bytesInPerSecond: 0, bytesOutPerSecond: 0))
     }
 }

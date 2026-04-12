@@ -36,7 +36,9 @@ struct MonitorViewModelBaseTests {
         let viewModel = RecordingViewModel(monitor: monitor, batcher: SynchronousBatcher())
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        for _ in 0..<10 where viewModel.receivedValues.count < 2 {
+            await Task.yield()
+        }
 
         #expect(viewModel.receivedValues == [0.25, 0.5])
         #expect(Array(viewModel.history.suffix(2)) == [0.25, 0.5])

@@ -2,6 +2,13 @@ import Testing
 @testable import PerformanceDashboard
 
 struct WirelessMonitorServiceTests {
+    private struct MockWiFiStateProvider: WiFiStateProviding {
+        let state: WiFiInterfaceState?
+
+        func currentState() -> WiFiInterfaceState? {
+            state
+        }
+    }
 
     // MARK: - WiFiSnapshot
 
@@ -49,6 +56,16 @@ struct WirelessMonitorServiceTests {
         let service = WiFiMonitorService()
         _ = service.stream()
         service.stop()
+    }
+
+    @Test @MainActor func wifiService_sample_usesInjectedProvider() async {
+        let service = WiFiMonitorService(
+            provider: MockWiFiStateProvider(state: WiFiInterfaceState(ssid: "Lab", rssi: -55, on: true))
+        )
+
+        let snapshot = await service.sample()
+
+        #expect(snapshot == WiFiSnapshot(ssid: "Lab", rssi: -55, on: true))
     }
 
     // MARK: - BluetoothMonitorService lifecycle
@@ -159,8 +176,8 @@ struct WirelessMonitorServiceTests {
 
     @Test @MainActor func wifiService_stream_returnsAsyncStream() {
         let service = WiFiMonitorService()
-        let stream = service.stream()
-        #expect(stream is AsyncStream<WiFiSnapshot>)
+        let stream: AsyncStream<WiFiSnapshot> = service.stream()
+        _ = stream
         service.stop()
     }
 

@@ -1,7 +1,23 @@
+import IOKit.ps
 import Testing
 @testable import PerformanceDashboard
 
 struct BatteryMonitorServiceTests {
+    private struct MockBatteryPowerSourceProvider: BatteryPowerSourceProviding {
+        let sourceDescription: [String: Any]?
+
+        func description() -> [String: Any]? {
+            sourceDescription
+        }
+    }
+
+    private struct MockBatteryRegistryProvider: BatteryRegistryProviding {
+        let info: (cycleCount: Int?, health: Double?)
+
+        func batteryInfo() -> (cycleCount: Int?, health: Double?) {
+            info
+        }
+    }
 
     // MARK: - BatterySnapshot
 

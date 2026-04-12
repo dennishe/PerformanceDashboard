@@ -9,6 +9,12 @@ public struct ProcessCPUStat: Sendable, Equatable {
     public var percentLabel: String { fraction.percentFormatted() }
 }
 
+struct ProcessTickSample: Sendable, Equatable {
+    let pid: Int32
+    let name: String
+    let totalTicks: UInt64
+}
+
 private struct ProcessSampleBaseline {
     let pidTicks: [Int32: UInt64]
     let uptimeNanoseconds: UInt64
@@ -32,18 +38,41 @@ public struct CPUSnapshot: MetricSnapshot {
 
 /// Monitors CPU utilisation by computing deltas between `host_processor_info` samples.
 public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
+    private let sampleUsage: @Sendable ([processor_cpu_load_info]) -> CPUUsageSample
+    private let sampleProcessInfo: @Sendable () -> [ProcessTickSample]
+    private let uptimeNanoseconds: @Sendable () -> UInt64
+
     @MonitorActor private var previousLoadInfo: [processor_cpu_load_info] = []
     @MonitorActor private var previousProcessSample: ProcessSampleBaseline?
     nonisolated static let coreTopology = CPUCoreTopology.current
 
+    override public init() {
+        sampleUsage = Self.sample(previous:)
+        sampleProcessInfo = Self.sampleProcessInfo
+        uptimeNanoseconds = { clock_gettime_nsec_np(CLOCK_UPTIME_RAW) }
+        super.init()
+    }
+
+    init(
+        sampleUsage: @escaping @Sendable ([processor_cpu_load_info]) -> CPUUsageSample,
+        sampleProcessInfo: @escaping @Sendable () -> [ProcessTickSample],
+        uptimeNanoseconds: @escaping @Sendable () -> UInt64
+    ) {
+        self.sampleUsage = sampleUsage
+        self.sampleProcessInfo = sampleProcessInfo
+        self.uptimeNanoseconds = uptimeNanoseconds
+        super.init()
+    }
+
     @MonitorActor
     override public func sample() async -> CPUSnapshot? {
-        let sample = CPUMonitorService.sample(previous: previousLoadInfo)
-        let currentUptimeNanoseconds = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        let sample = sampleUsage(previousLoadInfo)
+        let currentUptimeNanoseconds = uptimeNanoseconds()
         let elapsedNanoseconds = previousProcessSample.map {
             currentUptimeNanoseconds &- $0.uptimeNanoseconds
         }
-        let (newPidTicks, topProcesses) = CPUMonitorService.sampleProcesses(
+        let (newPidTicks, topProcesses) = CPUMonitorService.processStats(
+            from: sampleProcessInfo(),
             previous: previousProcessSample?.pidTicks ?? [:],
             elapsedNanoseconds: elapsedNanoseconds
         )
@@ -97,34 +126,51 @@ public final class CPUMonitorService: PollingMonitorBase<CPUSnapshot> {
     }
 
     /// Samples per-process CPU nanoseconds and returns the top 5 consumers.
-    nonisolated static func sampleProcesses(
-        previous: [Int32: UInt64],
-        elapsedNanoseconds: UInt64?
-    ) -> ([Int32: UInt64], [ProcessCPUStat]) {
+    nonisolated static func sampleProcessInfo() -> [ProcessTickSample] {
         let pidCount = proc_listpids(UInt32(PROC_ALL_PIDS), 0, nil, 0)
-        guard pidCount > 0 else { return ([:], []) }
+        guard pidCount > 0 else { return [] }
         var pids = [Int32](repeating: 0, count: Int(pidCount))
         proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, pidCount * Int32(MemoryLayout<Int32>.size))
 
-        var current: [Int32: UInt64] = [:]
-        var deltas: [(name: String, fraction: Double)] = []
         let taskSize = Int32(MemoryLayout<proc_taskinfo>.size)
+        var samples: [ProcessTickSample] = []
+        samples.reserveCapacity(pids.count)
 
         for pid in pids where pid > 0 {
             var info = proc_taskinfo()
             guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, taskSize) > 0 else { continue }
-            let ticks = info.pti_total_user + info.pti_total_system
-            current[pid] = ticks
-            if let prev = previous[pid], ticks > prev,
+            var buf = [CChar](repeating: 0, count: 64)
+            proc_name(pid, &buf, UInt32(buf.count))
+            let nameBytes = buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
+            let name = String(bytes: nameBytes, encoding: .utf8) ?? ""
+            samples.append(ProcessTickSample(
+                pid: pid,
+                name: name,
+                totalTicks: info.pti_total_user + info.pti_total_system
+            ))
+        }
+
+        return samples
+    }
+
+    nonisolated static func processStats(
+        from samples: [ProcessTickSample],
+        previous: [Int32: UInt64],
+        elapsedNanoseconds: UInt64?
+    ) -> ([Int32: UInt64], [ProcessCPUStat]) {
+        var current: [Int32: UInt64] = [:]
+        var deltas: [(name: String, fraction: Double)] = []
+        for sample in samples {
+            current[sample.pid] = sample.totalTicks
+            if let prev = previous[sample.pid], sample.totalTicks > prev,
                let elapsedNanoseconds,
                elapsedNanoseconds > 0 {
-                var buf = [CChar](repeating: 0, count: 64)
-                proc_name(pid, &buf, UInt32(buf.count))
-                let nameBytes = buf.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }
-                let name = String(bytes: nameBytes, encoding: .utf8) ?? ""
                 deltas.append((
-                    name.isEmpty ? "pid \(pid)" : name,
-                    processFraction(deltaTaskTicks: ticks - prev, elapsedNanoseconds: elapsedNanoseconds)
+                    sample.name.isEmpty ? "pid \(sample.pid)" : sample.name,
+                    processFraction(
+                        deltaTaskTicks: sample.totalTicks - prev,
+                        elapsedNanoseconds: elapsedNanoseconds
+                    )
                 ))
             }
         }

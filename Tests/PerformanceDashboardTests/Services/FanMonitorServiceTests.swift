@@ -71,6 +71,48 @@ struct FanMonitorServiceTests {
         #expect(result[0] == FanReading(current: 2_000, max: 4_000))
     }
 
+    @Test func sample_returnsEmpty_whenReportedFanCountIsZero() {
+        let reader = MockSMCReader(readings: [
+            "FNum": (dataType: 0, bytes: [0])
+        ])
+
+        let result = FanMonitorService.sample(reader)
+
+        #expect(result.isEmpty)
+    }
+
+    @Test func sample_skipsFans_withMissingOrInvalidReadings() {
+        let floatType = SMCBridge.fourCC("flt ") ?? 0
+        let reader = MockSMCReader(readings: [
+            "FNum": (dataType: 0, bytes: [3]),
+            "F0Ac": (dataType: floatType, bytes: floatBytes(1_500)),
+            "F0Mx": (dataType: floatType, bytes: floatBytes(4_000)),
+            "F1Ac": (dataType: floatType, bytes: floatBytes(2_000)),
+            "F1Mx": (dataType: floatType, bytes: floatBytes(0)),
+            "F2Mx": (dataType: floatType, bytes: floatBytes(5_000))
+        ])
+
+        let result = FanMonitorService.sample(reader)
+
+        #expect(result == [FanReading(current: 1_500, max: 4_000)])
+    }
+
+    @Test func sample_capsReportedFanCountAtNine() {
+        let floatType = SMCBridge.fourCC("flt ") ?? 0
+        var readings: [String: (dataType: UInt32, bytes: [UInt8])] = [
+            "FNum": (dataType: 0, bytes: [12])
+        ]
+
+        for index in 0..<10 {
+            readings["F\(index)Ac"] = (dataType: floatType, bytes: floatBytes(Float(1_000 + index)))
+            readings["F\(index)Mx"] = (dataType: floatType, bytes: floatBytes(4_000))
+        }
+
+        let result = FanMonitorService.sample(MockSMCReader(readings: readings))
+
+        #expect(result.count == 9)
+    }
+
     // MARK: - Service lifecycle
 
     @Test @MainActor func service_conformsToProtocol() {
