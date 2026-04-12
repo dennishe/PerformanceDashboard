@@ -12,8 +12,9 @@ final class SynchronousBatcher: UpdateScheduling {
 
 @MainActor
 func waitForAsyncUpdates(cycles: Int = 1) async {
+    let settleDelay = Constants.updateCoalescingInterval + .milliseconds(25)
     for _ in 0..<cycles {
-        try? await Task.sleep(for: .milliseconds(50))
+        try? await Task.sleep(for: settleDelay)
     }
 }
 

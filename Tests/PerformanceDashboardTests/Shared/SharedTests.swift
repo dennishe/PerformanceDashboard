@@ -21,6 +21,18 @@ struct ConstantsTests {
         #expect(Constants.pollingInterval == .seconds(1))
     }
 
+    @Test func batteryPollingInterval_isOneMinute() {
+        #expect(Constants.batteryPollingInterval == .seconds(60))
+    }
+
+    @Test func peripheralBatteryRefreshInterval_isOneMinute() {
+        #expect(Constants.peripheralBatteryRefreshInterval == .seconds(60))
+    }
+
+    @Test func updateCoalescingInterval_isOneHundredMilliseconds() {
+        #expect(Constants.updateCoalescingInterval == .milliseconds(100))
+    }
+
     @Test func historySamples_isSixty() {
         #expect(Constants.historySamples == 60)
     }
@@ -72,6 +84,20 @@ struct PollingCadenceTests {
         let base = PollingCadence.clock.now
         let next = PollingCadence.nextDeadline(after: base)
         #expect(next > base)
+    }
+
+    @Test func initialDeadline_withCustomInterval_usesProvidedInterval() {
+        let before = PollingCadence.clock.now
+        let deadline = PollingCadence.initialDeadline(after: .seconds(60))
+        let expected = before.advanced(by: .seconds(60))
+        #expect(deadline >= expected)
+        #expect(deadline <= expected.advanced(by: .milliseconds(100)))
+    }
+
+    @Test func nextDeadline_withCustomInterval_advancesByProvidedInterval() {
+        let base = PollingCadence.clock.now
+        let next = PollingCadence.nextDeadline(after: base, interval: .seconds(60))
+        #expect(next == base.advanced(by: .seconds(60)))
     }
 }
 

@@ -3,6 +3,8 @@ import AppKit
 @MainActor
 final class AtlasRingGaugeHostingView: NSView, RingGaugeAnimationTicking {
     private let imageLayer = CALayer()
+    private let animationDriver: RingGaugeAnimationDriver
+    private let currentTimestamp: () -> CFTimeInterval
 
     private var currentAtlasKey: RingGaugeAtlasKey?
     private var atlas: RingGaugeAtlas?
@@ -12,7 +14,21 @@ final class AtlasRingGaugeHostingView: NSView, RingGaugeAnimationTicking {
     private var animationStartTime: CFTimeInterval = 0
     private var isAnimating = false
 
-    override init(frame frameRect: NSRect) {
+    override convenience init(frame frameRect: NSRect) {
+        self.init(
+            frame: frameRect,
+            animationDriver: .shared,
+            currentTimestamp: CACurrentMediaTime
+        )
+    }
+
+    init(
+        frame frameRect: NSRect,
+        animationDriver: RingGaugeAnimationDriver,
+        currentTimestamp: @escaping () -> CFTimeInterval
+    ) {
+        self.animationDriver = animationDriver
+        self.currentTimestamp = currentTimestamp
         super.init(frame: frameRect)
         wantsLayer = true
         layer = CALayer()
@@ -66,9 +82,9 @@ final class AtlasRingGaugeHostingView: NSView, RingGaugeAnimationTicking {
 
         startFrameIndex = displayedFrameIndex
         targetFrameIndex = nextFrameIndex
-        animationStartTime = CACurrentMediaTime()
+        animationStartTime = currentTimestamp()
         isAnimating = true
-        RingGaugeAnimationDriver.shared.add(self)
+        animationDriver.add(self)
     }
 
     func ringGaugeAnimationDidTick(at timestamp: CFTimeInterval) {
@@ -120,6 +136,18 @@ final class AtlasRingGaugeHostingView: NSView, RingGaugeAnimationTicking {
 
     private func stopAnimation() {
         isAnimating = false
-        RingGaugeAnimationDriver.shared.remove(self)
+        animationDriver.remove(self)
+    }
+
+    var renderedFrameIndex: Int {
+        displayedFrameIndex
+    }
+
+    var destinationFrameIndex: Int {
+        targetFrameIndex
+    }
+
+    var isAnimatingForTesting: Bool {
+        isAnimating
     }
 }

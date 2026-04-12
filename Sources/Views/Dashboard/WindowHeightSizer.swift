@@ -37,6 +37,7 @@ struct WindowHeightSizer: NSViewRepresentable {
         /// Stores the height until the window is available.
         var pendingHeight: CGFloat = 0
         private(set) weak var window: NSWindow?
+        private var lastAppliedFrameHeight: CGFloat = 0
 
         /// Installs the coordinator as the window's delegate (once).
         func attach(to window: NSWindow) {
@@ -60,6 +61,10 @@ struct WindowHeightSizer: NSViewRepresentable {
             pendingHeight = contentHeight
             guard contentHeight > 0, let window else { return }
 
+             guard abs(lockedContentHeight - contentHeight) > 0.5 || lastAppliedFrameHeight == 0 else {
+                return
+            }
+
             lockedContentHeight = contentHeight
 
             let inset = Self.chromeInset(
@@ -70,6 +75,7 @@ struct WindowHeightSizer: NSViewRepresentable {
             let contentWidth = window.contentRect(forFrameRect: window.frame).width
             let targetContentRect = NSRect(x: 0, y: 0, width: contentWidth, height: targetContentHeight)
             let targetFrameHeight = window.frameRect(forContentRect: targetContentRect).height
+            lastAppliedFrameHeight = targetFrameHeight
 
             // Prevent manual vertical resizing — height is always driven by content.
             window.contentMinSize = NSSize(
@@ -100,6 +106,7 @@ struct WindowHeightSizer: NSViewRepresentable {
         /// Called on every pixel of a live user resize.
         /// Locks the frame height to the last committed content height so the
         /// window height tracks the tile layout rather than user drag.
+        @MainActor
         func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
             guard lockedContentHeight > 0 else { return frameSize }
             let inset = Self.chromeInset(

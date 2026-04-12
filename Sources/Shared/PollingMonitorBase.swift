@@ -38,6 +38,7 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
             continuation.finish()
         }
 
+        let interval = pollingInterval()
         var nextPoll = initialPollDeadline()
         while !Task.isCancelled {
             do {
@@ -50,7 +51,7 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
                 continuation.yield(snapshot)
             }
 
-            nextPoll = PollingCadence.nextDeadline(after: nextPoll)
+            nextPoll = PollingCadence.nextDeadline(after: nextPoll, interval: interval)
         }
     }
 
@@ -65,7 +66,13 @@ open class PollingMonitorBase<Value: MetricSnapshot>: MetricMonitorProtocol {
     /// Override when a service needs to delay the first sample.
     @MonitorActor
     open func initialPollDeadline() -> ContinuousClock.Instant {
-        PollingCadence.clock.now
+        PollingCadence.initialDeadline(after: pollingInterval())
+    }
+
+    /// Override when a monitor should run at a different cadence than the default dashboard tick.
+    @MonitorActor
+    open func pollingInterval() -> Duration {
+        Constants.pollingInterval
     }
 
     /// Override to provide one metric snapshot for the current polling tick.

@@ -8,6 +8,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
     private let peripheralBatteryProvider: any PeripheralBatteryProviding
     private let peripheralRefreshInterval: Duration
     private var peripheralRefreshTask: Task<Void, Never>?
+    private var isRefreshingConnectedDeviceBatteries = false
 
     public private(set) var snapshot = BatterySnapshot(
         isPresent: false, chargeFraction: 0, isCharging: false,
@@ -20,7 +21,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
         monitor: some MetricMonitorProtocol<BatterySnapshot>,
         batcher: any UpdateScheduling = DashboardUpdateBatcher.shared,
         peripheralBatteryProvider: any PeripheralBatteryProviding = BluetoothPeripheralBatteryProvider(),
-        peripheralRefreshInterval: Duration = .seconds(30)
+        peripheralRefreshInterval: Duration = .seconds(60)
     ) {
         self.peripheralBatteryProvider = peripheralBatteryProvider
         self.peripheralRefreshInterval = peripheralRefreshInterval
@@ -84,7 +85,7 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
             guard let self else { return }
 
             while !Task.isCancelled {
-                await self.refreshConnectedDeviceBatteries()
+                await self.refreshConnectedDeviceBatteries(showLoadingState: false)
 
                 do {
                     try await Task.sleep(for: self.peripheralRefreshInterval)
@@ -101,17 +102,37 @@ public final class BatteryViewModel: MonitorViewModelBase<BatterySnapshot> {
     }
 
     public func refreshConnectedDeviceBatteries() async {
-        guard !isLoadingConnectedDeviceBatteries else { return }
-        isLoadingConnectedDeviceBatteries = true
-        refreshTileModel()
-        defer {
-            isLoadingConnectedDeviceBatteries = false
+        await refreshConnectedDeviceBatteries(showLoadingState: true)
+    }
+
+    private func refreshConnectedDeviceBatteries(showLoadingState: Bool) async {
+        guard !isRefreshingConnectedDeviceBatteries else { return }
+        isRefreshingConnectedDeviceBatteries = true
+
+        if showLoadingState && !isLoadingConnectedDeviceBatteries {
+            isLoadingConnectedDeviceBatteries = true
             refreshTileModel()
         }
 
         let batteries = await peripheralBatteryProvider.peripheralBatteries()
-        connectedDeviceBatteries = Self.disambiguatedDeviceBatteries(from: batteries)
-        refreshTileModel()
+        let disambiguatedBatteries = Self.disambiguatedDeviceBatteries(from: batteries)
+        var shouldRefreshTileModel = false
+
+        if connectedDeviceBatteries != disambiguatedBatteries {
+            connectedDeviceBatteries = disambiguatedBatteries
+            shouldRefreshTileModel = true
+        }
+
+        isRefreshingConnectedDeviceBatteries = false
+
+        if showLoadingState && isLoadingConnectedDeviceBatteries {
+            isLoadingConnectedDeviceBatteries = false
+            shouldRefreshTileModel = true
+        }
+
+        if shouldRefreshTileModel {
+            refreshTileModel()
+        }
     }
 
     public var detailModel: DetailModel {

@@ -25,6 +25,21 @@ enum IOReport {
     }
 
     // MARK: – Cached function pointers
+    nonisolated(unsafe) private static let copyChannelsPtr: UnsafeMutableRawPointer? =
+        resolve("IOReportCopyChannelsInGroup")
+
+    nonisolated(unsafe) private static let subscribePtr: UnsafeMutableRawPointer? =
+        resolve("IOReportCreateSubscription")
+
+    nonisolated(unsafe) private static let takeSamplePtr: UnsafeMutableRawPointer? =
+        resolve("IOReportCreateSamples")
+
+    nonisolated(unsafe) private static let sampleDeltaPtr: UnsafeMutableRawPointer? =
+        resolve("IOReportCreateSamplesDelta")
+
+    nonisolated(unsafe) private static let integerValuePtr: UnsafeMutableRawPointer? =
+        resolve("IOReportSimpleGetIntegerValue")
+
     // `channelName` is called for every channel inside each `sampleDelta` loop;
     // re-resolving via dlsym on every call showed up as 4 M+ cycles in profiling.
     nonisolated(unsafe) private static let channelNamePtr: UnsafeMutableRawPointer? =
@@ -36,7 +51,7 @@ enum IOReport {
     /// The returned value is a retained CF object.
     static func copyChannels(group: String, subgroup: String? = nil) -> CFMutableDictionary? {
         typealias FnPtr = @convention(c) (CFString, CFString?, UInt64, UInt64) -> Unmanaged<CFMutableDictionary>?
-        guard let ptr = resolve("IOReportCopyChannelsInGroup") else { return nil }
+        guard let ptr = copyChannelsPtr else { return nil }
         return unsafeBitCast(ptr, to: FnPtr.self)(
             group as CFString,
             subgroup.map { $0 as CFString },
@@ -56,7 +71,7 @@ enum IOReport {
             UInt64,
             CFDictionary?
         ) -> IOReportSubscriptionRef?
-        guard let ptr = resolve("IOReportCreateSubscription") else { return nil }
+        guard let ptr = subscribePtr else { return nil }
         var outChannels: Unmanaged<CFMutableDictionary>?
         guard
             let ref = unsafeBitCast(ptr, to: FnPtr.self)(nil, channels, &outChannels, 0, nil),
@@ -73,7 +88,7 @@ enum IOReport {
         typealias FnPtr = @convention(c) (
             IOReportSubscriptionRef, CFMutableDictionary, CFDictionary?
         ) -> Unmanaged<CFDictionary>?
-        guard let ptr = resolve("IOReportCreateSamples") else { return nil }
+        guard let ptr = takeSamplePtr else { return nil }
         return unsafeBitCast(ptr, to: FnPtr.self)(sub, channels, nil)?.takeRetainedValue()
     }
 
@@ -82,7 +97,7 @@ enum IOReport {
         typealias FnPtr = @convention(c) (
             CFDictionary, CFDictionary, CFDictionary?
         ) -> Unmanaged<CFDictionary>?
-        guard let ptr = resolve("IOReportCreateSamplesDelta") else { return nil }
+        guard let ptr = sampleDeltaPtr else { return nil }
         return unsafeBitCast(ptr, to: FnPtr.self)(prev, curr, nil)?.takeRetainedValue()
     }
 
@@ -106,7 +121,7 @@ enum IOReport {
     /// Returns 0 if the symbol is unavailable or the channel is not simple-format.
     static func integerValue(_ channel: CFDictionary) -> Int64 {
         typealias FnPtr = @convention(c) (CFDictionary, UnsafeMutablePointer<Int32>?) -> Int64
-        guard let ptr = resolve("IOReportSimpleGetIntegerValue") else { return 0 }
+        guard let ptr = integerValuePtr else { return 0 }
         return unsafeBitCast(ptr, to: FnPtr.self)(channel, nil)
     }
 }

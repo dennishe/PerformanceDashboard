@@ -22,47 +22,47 @@ extension HostedNetworkTileContentView {
         let titleStartX = HostedNetworkTileLayout.iconSize + DashboardDesign.Spacing.small
         let titleWidth = max(0, ringFrame.minX - DashboardDesign.Spacing.small - titleStartX)
 
-        iconView.frame = CGRect(
+        setFrameIfNeeded(iconView, frame: CGRect(
             x: 0,
             y: (HostedNetworkTileLayout.headerHeight - HostedNetworkTileLayout.iconSize) / 2,
             width: HostedNetworkTileLayout.iconSize,
             height: HostedNetworkTileLayout.iconSize
-        )
-        ringGauge.view.frame = ringFrame
-        titleLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(ringGauge.view, frame: ringFrame)
+        setFrameIfNeeded(titleLayer, frame: CGRect(
             x: titleStartX,
             y: (HostedNetworkTileLayout.headerHeight - HostedNetworkTileStyles.title.lineHeight) / 2,
             width: titleWidth,
             height: HostedNetworkTileStyles.title.lineHeight
-        )
+        ))
     }
 
     func layoutDirectionRows(in bounds: CGRect, row1Y: CGFloat, row2Y: CGFloat) {
         let valueWidth = max(0, bounds.width - HostedNetworkTileLayout.arrowWidth - DashboardDesign.Spacing.xSmall)
-        downArrowLayer.frame = CGRect(
+        setFrameIfNeeded(downArrowLayer, frame: CGRect(
             x: 0,
             y: row1Y,
             width: HostedNetworkTileLayout.arrowWidth,
             height: HostedNetworkTileStyles.body.lineHeight
-        )
-        downValueLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(downValueLayer, frame: CGRect(
             x: HostedNetworkTileLayout.arrowWidth + DashboardDesign.Spacing.xSmall,
             y: row1Y,
             width: valueWidth,
             height: HostedNetworkTileStyles.body.lineHeight
-        )
-        upArrowLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(upArrowLayer, frame: CGRect(
             x: 0,
             y: row2Y,
             width: HostedNetworkTileLayout.arrowWidth,
             height: HostedNetworkTileStyles.body.lineHeight
-        )
-        upValueLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(upValueLayer, frame: CGRect(
             x: HostedNetworkTileLayout.arrowWidth + DashboardDesign.Spacing.xSmall,
             y: row2Y,
             width: valueWidth,
             height: HostedNetworkTileStyles.body.lineHeight
-        )
+        ))
     }
 
     func layoutSparklines(in bounds: CGRect, sparklineY: CGFloat) {
@@ -72,7 +72,7 @@ extension HostedNetworkTileContentView {
             width: bounds.width,
             height: HostedNetworkTileLayout.sparklineHeight
         )
-        downloadSparklineView.frame = sparklineFrame
-        uploadSparklineView.frame = sparklineFrame
+        setFrameIfNeeded(downloadSparklineView, frame: sparklineFrame)
+        setFrameIfNeeded(uploadSparklineView, frame: sparklineFrame)
     }
 }

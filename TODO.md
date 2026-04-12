@@ -108,6 +108,9 @@ Legend: 🔴 Correctness · 🟡 UI/UX & Polish · 🟢 Testing & Code Quality
 - [x] **17. Extract Network throughput normalisation into ViewModel** *(fixed)*  
   Added `inGauge`, `outGauge`, `historyInGauge`, `historyOutGauge` to `NetworkViewModel`. `DashboardView` now uses these instead of inline `min(/ 100_000_000, 1)` calls. Tests added for normalised gauge values.
 
+- [x] **30. Add ring gauge regression coverage** *(done)*  
+  Added a deterministic `RingGaugeAnimationDriver` tick seam plus targeted regression tests proving that listener removal during `tick()` does not starve later listeners and that `AtlasRingGaugeHostingView` still settles on its final frame.
+
 ---
 
 ## 🟢 Code Quality

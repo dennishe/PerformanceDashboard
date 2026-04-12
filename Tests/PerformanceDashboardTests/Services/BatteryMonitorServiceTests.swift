@@ -63,6 +63,12 @@ struct BatteryMonitorServiceTests {
         let _: any MetricMonitorProtocol<BatterySnapshot> = service
     }
 
+    @Test @MainActor func service_usesBatteryPollingInterval() async {
+        let service = BatteryMonitorService()
+        let interval = await service.pollingInterval()
+        #expect(interval == Constants.batteryPollingInterval)
+    }
+
     @Test @MainActor func stream_canBeStartedAndStopped() {
         let service = BatteryMonitorService()
         _ = service.stream()

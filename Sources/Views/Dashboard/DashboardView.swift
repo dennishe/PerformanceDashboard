@@ -49,19 +49,19 @@ struct DashboardView: View {
         ) {
             if settings.isVisible(.cpu) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.cpu.tileModel },
+                    viewModel: services.cpu,
                     action: { detailSelection = .cpu }
                 )
             }
             if settings.isVisible(.gpu) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.gpu.tileModel },
+                    viewModel: services.gpu,
                     action: { detailSelection = .gpu }
                 )
             }
             if settings.isVisible(.memory) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.memory.tileModel },
+                    viewModel: services.memory,
                     action: { detailSelection = .memory }
                 )
             }
@@ -73,39 +73,39 @@ struct DashboardView: View {
             }
             if settings.isVisible(.disk) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.disk.tileModel },
+                    viewModel: services.disk,
                     action: { detailSelection = .disk }
                 )
             }
             #if arch(arm64)
             if settings.isVisible(.ane) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.accelerator.tileModel },
+                    viewModel: services.accelerator,
                     action: { detailSelection = .ane }
                 )
             }
             if settings.isVisible(.mediaEngine) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.mediaEngine.tileModel },
+                    viewModel: services.mediaEngine,
                     action: { detailSelection = .mediaEngine }
                 )
             }
             #endif
             if settings.isVisible(.power) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.power.tileModel },
+                    viewModel: services.power,
                     action: { detailSelection = .power }
                 )
             }
             if settings.isVisible(.thermal) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.thermal.tileModel },
+                    viewModel: services.thermal,
                     action: { detailSelection = .thermal }
                 )
             }
             if settings.isVisible(.fan) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.fan.tileModel },
+                    viewModel: services.fan,
                     action: { detailSelection = .fan }
                 )
             }
@@ -117,7 +117,7 @@ struct DashboardView: View {
             }
             if settings.isVisible(.wireless) {
                 ObservedMetricTileButton(
-                    modelProvider: { services.wireless.tileModel },
+                    viewModel: services.wireless,
                     action: { detailSelection = .wireless }
                 )
             }

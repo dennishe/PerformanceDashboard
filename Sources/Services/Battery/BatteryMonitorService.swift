@@ -23,6 +23,11 @@ public struct BatterySnapshot: MetricSnapshot {
 /// Monitors battery and power source via the public IOPS API + IORegistry.
 public final class BatteryMonitorService: PollingMonitorBase<BatterySnapshot> {
     @MonitorActor
+    override public func pollingInterval() -> Duration {
+        Constants.batteryPollingInterval
+    }
+
+    @MonitorActor
     override public func sample() async -> BatterySnapshot? {
         BatteryMonitorService.readSnapshot()
     }

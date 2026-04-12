@@ -9,6 +9,30 @@ final class HostedMetricTileContentView: NSView {
     private let subtitleLayer = CATextLayer()
     private let sparklineView = SparklineHostingView()
     private let ringGauge = makeRingGaugePlatformComponent()
+    let titleTextStyle = PreparedTileTextStyle(
+        style: Styles.title,
+        tintKey: .secondaryLabel
+    )
+    let subtitleTextStyle = PreparedTileTextStyle(
+        style: Styles.subtitle,
+        tintKey: .tertiaryLabel
+    )
+    let inactiveValueTextStyle = PreparedTileTextStyle(
+        style: Styles.inactiveValue,
+        tintKey: .secondaryLabel
+    )
+    let normalValueTextStyle = PreparedTileTextStyle(
+        style: Styles.normalValue,
+        tintKey: .normal
+    )
+    let warningValueTextStyle = PreparedTileTextStyle(
+        style: Styles.warningValue,
+        tintKey: .warning
+    )
+    let criticalValueTextStyle = PreparedTileTextStyle(
+        style: Styles.criticalValue,
+        tintKey: .critical
+    )
 
     private var currentModel: MetricTileModel?
     private var currentScale: CGFloat = 0
@@ -16,6 +40,7 @@ final class HostedMetricTileContentView: NSView {
     private var titleState: TileTextLayerState?
     private var valueState: TileTextLayerState?
     private var subtitleState: TileTextLayerState?
+    private var lastLaidOutBounds: CGRect = .null
 
     override var isFlipped: Bool { true }
 
@@ -23,10 +48,7 @@ final class HostedMetricTileContentView: NSView {
         super.init(frame: frameRect)
         wantsLayer = true
         layer = CALayer()
-
-        configureTileTextLayer(titleLayer)
-        configureTileTextLayer(valueLayer)
-        configureTileTextLayer(subtitleLayer)
+        [titleLayer, valueLayer, subtitleLayer].forEach(configureTileTextLayer)
 
         iconView.imageScaling = .scaleProportionallyUpOrDown
         addSubview(iconView)
@@ -48,6 +70,9 @@ final class HostedMetricTileContentView: NSView {
 
     override func layout() {
         super.layout()
+        let integralBounds = bounds.integral
+        guard integralBounds != lastLaidOutBounds else { return }
+        lastLaidOutBounds = integralBounds
         layoutSubviews()
     }
 
@@ -58,15 +83,11 @@ final class HostedMetricTileContentView: NSView {
         currentScale = displayScale
 
         let layerColor = model.gaugeValue == nil ? LayerColorComponents.inactive : .threshold(model.thresholdLevel)
-        let titleColor = NSColor.secondaryLabelColor
-        let valueColor = model.gaugeValue == nil ? NSColor.secondaryLabelColor : layerColor.nsColor()
         let subtitleText = subtitle(for: model)
-        let valueStyle = LayerTextStyle.tileValue(color: valueColor)
 
         applyTextContent(
             model: model,
-            titleColor: titleColor,
-            valueStyle: valueStyle,
+            valueTextStyle: valueTextStyle(for: model),
             subtitleText: subtitleText,
             displayScale: displayScale
         )
@@ -84,54 +105,40 @@ final class HostedMetricTileContentView: NSView {
 }
 
 private extension HostedMetricTileContentView {
-    enum Layout {
-        static let headerHeight = MetricTileLayoutMetrics.ringGaugeSize
-        static let sparklineHeight = SparklineGeometry.displayHeight
-        static let iconSize: CGFloat = 14
-    }
-
-    enum Styles {
-        static let title = LayerTextStyle.tileCaption()
-        static let subtitle = LayerTextStyle.tileSubtitle()
-        static let valueLayout = LayerTextStyle.tileValue(color: .labelColor)
-    }
-
     func applyTextContent(
         model: MetricTileModel,
-        titleColor: NSColor,
-        valueStyle: LayerTextStyle,
+        valueTextStyle: PreparedTileTextStyle,
         subtitleText: String,
         displayScale: CGFloat
     ) {
-        updateTileSymbolView(iconView, systemName: model.systemImage, tintColor: titleColor, state: &iconState)
+        updateTileSymbolView(
+            iconView,
+            systemName: model.systemImage,
+            tintColor: .secondaryLabelColor,
+            tintKey: .secondaryLabel,
+            state: &iconState
+        )
         updateTileTextLayer(
             titleLayer,
             text: model.displayTitle,
-            style: Styles.title,
+            preparedStyle: titleTextStyle,
             displayScale: displayScale,
             state: &titleState
         )
         updateTileTextLayer(
             valueLayer,
             text: model.value,
-            style: valueStyle,
+            preparedStyle: valueTextStyle,
             displayScale: displayScale,
             state: &valueState
         )
         updateTileTextLayer(
             subtitleLayer,
             text: subtitleText,
-            style: Styles.subtitle,
+            preparedStyle: subtitleTextStyle,
             displayScale: displayScale,
             state: &subtitleState
         )
-    }
-
-    func subtitle(for model: MetricTileModel) -> String {
-        if let reason = model.unavailableReason, model.gaugeValue == nil {
-            return "! " + reason
-        }
-        return model.subtitle ?? ""
     }
 
     func layoutSubviews() {
@@ -147,51 +154,33 @@ private extension HostedMetricTileContentView {
         let titleWidth = max(0, ringFrame.minX - DashboardDesign.Spacing.small - titleStartX)
         let sparklineY = bounds.height - Layout.sparklineHeight
 
-        iconView.frame = CGRect(
+        setFrameIfNeeded(iconView, frame: CGRect(
             x: 0,
             y: (headerFrame.height - Layout.iconSize) / 2,
             width: Layout.iconSize,
             height: Layout.iconSize
-        )
-        ringGauge.view.frame = ringFrame
-        titleLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(ringGauge.view, frame: ringFrame)
+        setFrameIfNeeded(titleLayer, frame: CGRect(
             x: titleStartX,
             y: (headerFrame.height - Styles.title.lineHeight) / 2,
             width: titleWidth,
             height: Styles.title.lineHeight
-        )
-        valueLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(valueLayer, frame: CGRect(
             x: 0,
             y: headerFrame.maxY + DashboardDesign.Spacing.xSmall,
             width: bounds.width,
             height: Styles.valueLayout.lineHeight
-        )
-        subtitleLayer.frame = CGRect(
+        ))
+        setFrameIfNeeded(subtitleLayer, frame: CGRect(
             x: 0,
             y: valueLayer.frame.maxY + DashboardDesign.Spacing.xSmall,
             width: bounds.width,
             height: Styles.subtitle.lineHeight
-        )
-        sparklineView.frame = CGRect(x: 0, y: sparklineY, width: bounds.width, height: Layout.sparklineHeight)
-    }
-}
-
-struct HostedMetricTileContentRepresentable: NSViewRepresentable, Equatable {
-    let model: MetricTileModel
-
-    func makeNSView(context: Context) -> HostedMetricTileContentView {
-        HostedMetricTileContentView()
-    }
-
-    func sizeThatFits(
-        _ proposal: ProposedViewSize,
-        nsView: HostedMetricTileContentView,
-        context: Context
-    ) -> CGSize? {
-        CGSize(width: proposal.width ?? nsView.bounds.width, height: MetricTileLayoutMetrics.contentHeight)
-    }
-
-    func updateNSView(_ nsView: HostedMetricTileContentView, context: Context) {
-        nsView.update(model: model, displayScale: context.environment.displayScale)
+        ))
+        setFrameIfNeeded(sparklineView, frame: CGRect(
+            x: 0, y: sparklineY, width: bounds.width, height: Layout.sparklineHeight
+        ))
     }
 }

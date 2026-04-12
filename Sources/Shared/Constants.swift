@@ -5,8 +5,11 @@ enum Constants {
     /// Default polling interval for all monitor services.
     static let pollingInterval: Duration = .seconds(1)
 
+    /// Battery charge, cycle count, and health change slowly enough to sample lazily.
+    static let batteryPollingInterval: Duration = .seconds(60)
+
     /// Peripheral battery levels change slowly, so refresh accessory batteries less often.
-    static let peripheralBatteryRefreshInterval: Duration = .seconds(30)
+    static let peripheralBatteryRefreshInterval: Duration = .seconds(60)
 
     /// Number of historical samples to retain for sparklines.
     static let historySamples: Int = 60
@@ -18,8 +21,8 @@ enum Constants {
     static let extendedHistorySamples: Int = 900
 
     /// Short coalescing window for applying sampled values on the main actor.
-    /// This keeps tiles visually in sync without adding a perceptible delay.
-    static let updateCoalescingInterval: Duration = .milliseconds(25)
+    /// This reduces redundant UI transactions while keeping displayed data unchanged.
+    static let updateCoalescingInterval: Duration = .milliseconds(100)
 
     /// Minimum width for the dashboard window content.
     /// 560 pt allows a 3-column layout even in comfortable mode (3×170 + 2×12 + 2×16 = 574).

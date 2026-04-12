@@ -80,4 +80,45 @@ struct BatteryViewModelTileTests {
         #expect(BatteryAccessoryKind.componentBadge(for: "AirPods Pro (Case)") == "C")
         #expect(BatteryAccessoryKind.componentBadge(for: "Magic Keyboard") == nil)
     }
+
+    @Test func batteryTileModel_mapsPrimaryBatteryAndAccessorySummary() async {
+        let monitor = MockMonitor<BatterySnapshot>()
+        monitor.snapshots = [BatterySnapshot(
+            isPresent: true, chargeFraction: 0.78, isCharging: false,
+            onAC: false, timeToEmptyMinutes: 110, cycleCount: nil, healthFraction: nil
+        )]
+        let provider = MockPeripheralBatteryProvider(batteries: [
+            PeripheralBattery(name: "Magic Keyboard", percent: 63),
+            PeripheralBattery(name: "Magic Mouse", percent: 84)
+        ])
+        let viewModel = BatteryViewModel(monitor: monitor, peripheralBatteryProvider: provider)
+        viewModel.start()
+        await waitForAsyncUpdates()
+        await viewModel.refreshConnectedDeviceBatteries()
+
+        let model = BatteryTileModel(viewModel: viewModel)
+
+        #expect(model.isBatteryPresent)
+        #expect(model.headerValueText == "78%")
+        #expect(model.accessorySectionTitle == "ACCESSORIES")
+        #expect(model.accessoryCountText == "2 connected")
+        #expect(model.accessoryRows.map(\.name) == ["Magic Keyboard", "Magic Mouse"])
+        #expect(model.accessoryEmptyMessage == nil)
+    }
+
+    @Test func batteryTileModel_usesAccessoryOnlyEmptyStateWithoutHostBattery() {
+        let viewModel = BatteryViewModel(
+            monitor: MockMonitor<BatterySnapshot>(),
+            peripheralBatteryProvider: MockPeripheralBatteryProvider(batteries: [])
+        )
+
+        let model = BatteryTileModel(viewModel: viewModel)
+
+        #expect(!model.isBatteryPresent)
+        #expect(model.headerValueText == nil)
+        #expect(model.accessorySectionTitle == "ACCESSORY POWER")
+        #expect(model.accessoryCountText == nil)
+        #expect(model.accessoryRows.isEmpty)
+        #expect(model.accessoryEmptyMessage == "No accessory batteries available")
+    }
 }

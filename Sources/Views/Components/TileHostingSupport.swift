@@ -2,8 +2,46 @@ import AppKit
 
 struct TileTextLayerState: Equatable {
     let text: String
-    let style: LayerTextStyle
+    let styleKey: LayerTextStyleKey
     let displayScale: CGFloat
+}
+
+@MainActor
+struct PreparedTileTextStyle {
+    let styleKey: LayerTextStyleKey
+    private let attributes: [NSAttributedString.Key: Any]
+
+    init(style: LayerTextStyle, tintKey: TileTintKey? = nil) {
+        let resolvedTintKey = tintKey ?? TileTintKey(color: style.color)
+        styleKey = LayerTextStyleKey(style: style, colorKey: resolvedTintKey)
+        attributes = style.textAttributes()
+    }
+
+    func attributedString(_ text: String) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: attributes)
+    }
+}
+
+struct LayerTextStyleKey: Equatable {
+    let fontSize: Int
+    let fontWeight: Int
+    let colorKey: TileTintKey
+    let kerning: Int
+    let lineHeight: Int
+    let fontKind: LayerTextStyle.FontKind
+
+    init(style: LayerTextStyle) {
+        self.init(style: style, colorKey: TileTintKey(color: style.color))
+    }
+
+    init(style: LayerTextStyle, colorKey: TileTintKey) {
+        fontSize = Int((style.fontSize * 100).rounded())
+        fontWeight = Int((style.fontWeight.rawValue * 1_000).rounded())
+        self.colorKey = colorKey
+        kerning = Int((style.kerning * 100).rounded())
+        lineHeight = Int((style.lineHeight * 100).rounded())
+        fontKind = style.fontKind
+    }
 }
 
 struct TileSymbolState: Equatable {
@@ -16,6 +54,14 @@ struct TileTintKey: Equatable {
     let green: Int
     let blue: Int
     let alpha: Int
+
+    static let label = TileTintKey(color: .labelColor)
+    static let tertiaryLabel = TileTintKey(color: .tertiaryLabelColor)
+    static let secondaryLabel = TileTintKey(color: .secondaryLabelColor)
+    static let normal = TileTintKey(color: .systemGreen)
+    static let warning = TileTintKey(color: .systemOrange)
+    static let critical = TileTintKey(color: .systemRed)
+    static let blue = TileTintKey(color: .systemBlue)
 
     init(color: NSColor) {
         let resolvedColor = color.usingColorSpace(.deviceRGB) ?? color
@@ -43,12 +89,37 @@ func configureTileTextLayer(_ layer: CATextLayer) {
     layer.actions = [
         "bounds": NSNull(),
         "contentsScale": NSNull(),
+        "contents": NSNull(),
         "position": NSNull(),
+        "rasterizationScale": NSNull(),
         "string": NSNull()
     ]
     layer.alignmentMode = .left
+    layer.drawsAsynchronously = true
     layer.isWrapped = false
+    layer.shouldRasterize = true
     layer.truncationMode = .end
+}
+
+@MainActor
+func updateTileTextLayer(
+    _ layer: CATextLayer,
+    text: String,
+    preparedStyle: PreparedTileTextStyle,
+    displayScale: CGFloat,
+    state: inout TileTextLayerState?
+) {
+    let nextState = TileTextLayerState(
+        text: text,
+        styleKey: preparedStyle.styleKey,
+        displayScale: displayScale
+    )
+    guard state != nextState else { return }
+
+    state = nextState
+    layer.contentsScale = displayScale
+    layer.rasterizationScale = displayScale
+    layer.string = preparedStyle.attributedString(text)
 }
 
 @MainActor
@@ -59,11 +130,16 @@ func updateTileTextLayer(
     displayScale: CGFloat,
     state: inout TileTextLayerState?
 ) {
-    let nextState = TileTextLayerState(text: text, style: style, displayScale: displayScale)
+    let nextState = TileTextLayerState(
+        text: text,
+        styleKey: LayerTextStyleKey(style: style),
+        displayScale: displayScale
+    )
     guard state != nextState else { return }
 
     state = nextState
     layer.contentsScale = displayScale
+    layer.rasterizationScale = displayScale
     layer.string = style.attributedString(text)
 }
 
@@ -74,7 +150,24 @@ func updateTileSymbolView(
     tintColor: NSColor,
     state: inout TileSymbolState?
 ) {
-    let nextState = TileSymbolState(systemName: systemName, tintKey: TileTintKey(color: tintColor))
+    updateTileSymbolView(
+        imageView,
+        systemName: systemName,
+        tintColor: tintColor,
+        tintKey: TileTintKey(color: tintColor),
+        state: &state
+    )
+}
+
+@MainActor
+func updateTileSymbolView(
+    _ imageView: NSImageView,
+    systemName: String,
+    tintColor: NSColor,
+    tintKey: TileTintKey,
+    state: inout TileSymbolState?
+) {
+    let nextState = TileSymbolState(systemName: systemName, tintKey: tintKey)
     guard state != nextState else { return }
 
     state = nextState
@@ -86,41 +179,5 @@ extension LayerTextStyle {
     @MainActor
     func attributedString(_ text: String) -> NSAttributedString {
         NSAttributedString(string: text, attributes: textAttributes())
-    }
-}
-
-@MainActor
-func makeTileSymbolImage(systemName: String) -> NSImage? {
-    TileSymbolImageCache.shared.image(for: systemName)
-}
-
-@MainActor
-private final class TileSymbolImageCache {
-    static let shared = TileSymbolImageCache()
-
-    private let cache = NSCache<NSString, NSImage>()
-
-    private init() {
-        cache.countLimit = 32
-    }
-
-    func image(for systemName: String) -> NSImage? {
-        if let cachedImage = cache.object(forKey: systemName as NSString) {
-            return cachedImage
-        }
-
-        let configuration = NSImage.SymbolConfiguration(
-            pointSize: DashboardDesign.FontSize.tileSubtitle,
-            weight: .semibold
-        )
-        guard let image = NSImage(systemSymbolName: systemName, accessibilityDescription: nil)?
-            .withSymbolConfiguration(configuration),
-            let templateImage = image.copy() as? NSImage else {
-            return nil
-        }
-
-        templateImage.isTemplate = true
-        cache.setObject(templateImage, forKey: systemName as NSString)
-        return templateImage
     }
 }

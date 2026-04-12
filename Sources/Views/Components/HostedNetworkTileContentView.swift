@@ -12,6 +12,22 @@ final class HostedNetworkTileContentView: NSView {
     let downloadSparklineView = SparklineHostingView()
     let uploadSparklineView = SparklineHostingView()
     let ringGauge = makeRingGaugePlatformComponent()
+    private let titleTextStyle = PreparedTileTextStyle(
+        style: HostedNetworkTileStyles.title,
+        tintKey: .secondaryLabel
+    )
+    private let downloadArrowTextStyle = PreparedTileTextStyle(
+        style: HostedNetworkTileStyles.downloadArrow,
+        tintKey: .normal
+    )
+    private let uploadArrowTextStyle = PreparedTileTextStyle(
+        style: HostedNetworkTileStyles.uploadArrow,
+        tintKey: .blue
+    )
+    private let bodyTextStyle = PreparedTileTextStyle(
+        style: HostedNetworkTileStyles.body,
+        tintKey: .label
+    )
 
     private var currentTileModel: MetricTileModel?
     private var currentInTileModel: MetricTileModel?
@@ -23,6 +39,7 @@ final class HostedNetworkTileContentView: NSView {
     private var downValueState: TileTextLayerState?
     private var upArrowState: TileTextLayerState?
     private var upValueState: TileTextLayerState?
+    private var lastLaidOutBounds: CGRect = .null
 
     override var isFlipped: Bool { true }
 
@@ -56,6 +73,9 @@ final class HostedNetworkTileContentView: NSView {
 
     override func layout() {
         super.layout()
+        let integralBounds = bounds.integral
+        guard integralBounds != lastLaidOutBounds else { return }
+        lastLaidOutBounds = integralBounds
         layoutSubviews()
     }
 
@@ -128,12 +148,13 @@ private extension HostedNetworkTileContentView {
             iconView,
             systemName: "network",
             tintColor: tintColor,
+            tintKey: .secondaryLabel,
             state: &iconState
         )
         updateTileTextLayer(
             titleLayer,
             text: "NETWORK",
-            style: HostedNetworkTileStyles.title,
+            preparedStyle: titleTextStyle,
             displayScale: displayScale,
             state: &titleState
         )
@@ -143,28 +164,28 @@ private extension HostedNetworkTileContentView {
         updateTileTextLayer(
             downArrowLayer,
             text: "↓",
-            style: HostedNetworkTileStyles.downloadArrow,
+            preparedStyle: downloadArrowTextStyle,
             displayScale: displayScale,
             state: &downArrowState
         )
         updateTileTextLayer(
             downValueLayer,
             text: inValue,
-            style: HostedNetworkTileStyles.body,
+            preparedStyle: bodyTextStyle,
             displayScale: displayScale,
             state: &downValueState
         )
         updateTileTextLayer(
             upArrowLayer,
             text: "↑",
-            style: HostedNetworkTileStyles.uploadArrow,
+            preparedStyle: uploadArrowTextStyle,
             displayScale: displayScale,
             state: &upArrowState
         )
         updateTileTextLayer(
             upValueLayer,
             text: outValue,
-            style: HostedNetworkTileStyles.body,
+            preparedStyle: bodyTextStyle,
             displayScale: displayScale,
             state: &upValueState
         )

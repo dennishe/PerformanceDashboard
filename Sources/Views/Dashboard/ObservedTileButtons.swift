@@ -1,12 +1,19 @@
 import SwiftUI
 
 @MainActor
-struct ObservedMetricTileButton: View {
-    let modelProvider: @MainActor () -> MetricTileModel
+protocol MetricTileModelProviding: AnyObject {
+    var tileModel: MetricTileModel { get }
+}
+
+extension MonitorViewModelBase: MetricTileModelProviding {}
+
+@MainActor
+struct ObservedMetricTileButton<ViewModel: MetricTileModelProviding>: View {
+    let viewModel: ViewModel
     let action: @MainActor () -> Void
 
     var body: some View {
-        MetricTileView(model: modelProvider())
+        MetricTileView(model: viewModel.tileModel)
             .equatable()
             .tileButton(action: action)
     }
@@ -18,7 +25,8 @@ struct ObservedNetworkTileButton: View {
     let action: @MainActor () -> Void
 
     var body: some View {
-        NetworkTileView(viewModel: viewModel)
+        NetworkTileView(models: NetworkTileModels(viewModel: viewModel))
+            .equatable()
             .tileButton(action: action)
     }
 }
@@ -29,7 +37,8 @@ struct ObservedBatteryTileButton: View {
     let action: @MainActor () -> Void
 
     var body: some View {
-        BatteryTileView(viewModel: viewModel)
+        BatteryTileView(model: BatteryTileModel(viewModel: viewModel))
+            .equatable()
             .tileButton(action: action)
     }
 }

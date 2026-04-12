@@ -1,7 +1,7 @@
 import SwiftUI
 
 #Preview {
-    BatteryTileView(viewModel: BatteryTilePreviewFactory.makeViewModel())
+    BatteryTileView(model: BatteryTileModel(viewModel: BatteryTilePreviewFactory.makeViewModel()))
         .frame(width: 220)
         .padding()
 }

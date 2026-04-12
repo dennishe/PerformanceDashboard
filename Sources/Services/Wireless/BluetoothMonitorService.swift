@@ -51,10 +51,9 @@ public final class BluetoothMonitorService: PollingMonitorBase<BluetoothSnapshot
         var result: [PeripheralBattery] = []
         var service = IOIteratorNext(iterator)
         while service != IO_OBJECT_NULL {
-            if let props = ioProperties(for: service),
-               props["Transport"] as? String == "Bluetooth",
-               let battery = props["BatteryPercent"] as? Int {
-                let name = props["Product"] as? String ?? "Bluetooth Device"
+            if stringProperty(named: "Transport", for: service) == "Bluetooth",
+               let battery = intProperty(named: "BatteryPercent", for: service) {
+                let name = stringProperty(named: "Product", for: service) ?? "Bluetooth Device"
                 result.append(PeripheralBattery(name: name, percent: battery))
             }
             IOObjectRelease(service)
@@ -63,10 +62,28 @@ public final class BluetoothMonitorService: PollingMonitorBase<BluetoothSnapshot
         return result
     }
 
-    nonisolated private static func ioProperties(for service: io_service_t) -> [String: Any]? {
-        var props: Unmanaged<CFMutableDictionary>?
-        guard IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0)
-                == KERN_SUCCESS else { return nil }
-        return props?.takeRetainedValue() as? [String: Any]
+    nonisolated private static func stringProperty(named key: String, for service: io_service_t) -> String? {
+        ioProperty(named: key, for: service) as? String
+    }
+
+    nonisolated private static func intProperty(named key: String, for service: io_service_t) -> Int? {
+        if let value = ioProperty(named: key, for: service) as? Int {
+            return value
+        }
+
+        if let number = ioProperty(named: key, for: service) as? NSNumber {
+            return number.intValue
+        }
+
+        return nil
+    }
+
+    nonisolated private static func ioProperty(named key: String, for service: io_service_t) -> Any? {
+        IORegistryEntryCreateCFProperty(
+            service,
+            key as CFString,
+            kCFAllocatorDefault,
+            0
+        )?.takeRetainedValue()
     }
 }
