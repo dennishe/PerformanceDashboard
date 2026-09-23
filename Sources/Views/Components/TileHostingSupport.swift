@@ -9,16 +9,16 @@ struct TileTextLayerState: Equatable {
 @MainActor
 struct PreparedTileTextStyle {
     let styleKey: LayerTextStyleKey
-    private let attributes: [NSAttributedString.Key: Any]
+    private let style: LayerTextStyle
 
     init(style: LayerTextStyle, tintKey: TileTintKey? = nil) {
         let resolvedTintKey = tintKey ?? TileTintKey(color: style.color)
         styleKey = LayerTextStyleKey(style: style, colorKey: resolvedTintKey)
-        attributes = style.textAttributes()
+        self.style = style
     }
 
-    func attributedString(_ text: String) -> NSAttributedString {
-        NSAttributedString(string: text, attributes: attributes)
+    func attributedString(_ text: String, appearance: NSAppearance = NSApp.effectiveAppearance) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: style.textAttributes(appearance: appearance))
     }
 }
 

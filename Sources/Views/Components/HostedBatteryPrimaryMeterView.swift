@@ -42,13 +42,23 @@ final class HostedBatteryPrimaryMeterView: NSView {
         layoutLayers()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard currentFraction >= 0 else { return }
+        let fraction = currentFraction
+        currentFraction = -1
+        update(fraction: fraction, thresholdLevel: currentLevel)
+    }
+
     func update(fraction: Double, thresholdLevel: ThresholdLevel) {
         let clampedFraction = min(max(fraction, 0), 1)
         guard currentFraction != clampedFraction || currentLevel != thresholdLevel else { return }
 
         currentFraction = clampedFraction
         currentLevel = thresholdLevel
-        fillLayer.backgroundColor = LayerColorComponents.threshold(thresholdLevel).cgColor()
+        fillLayer.backgroundColor = DashboardPalette.accent(
+            title: "Battery", level: thresholdLevel, appearance: effectiveAppearance
+        ).cgColor
         layoutLayers()
     }
 }

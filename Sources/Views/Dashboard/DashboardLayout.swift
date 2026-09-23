@@ -14,7 +14,7 @@ struct DashboardLayoutEntry: Sendable {
 struct DashboardLayout: Layout {
     var spacing: CGFloat = 12
     var minTileWidth: CGFloat = 200
-    var padding: CGFloat = 16
+    var padding: CGFloat = 24
     var onContentHeightChange: (@MainActor @Sendable (CGFloat) -> Void)?
 
     // MARK: Cache
@@ -118,9 +118,10 @@ private extension DashboardLayout {
     /// Entries are keyed by width so different size proposals never evict each other.
     func populate(_ cache: inout Cache, availableWidth: CGFloat, subviews: Subviews) {
         guard cache.entries[availableWidth] == nil else { return }
-        let cols = columnCount(for: availableWidth)
+        let consoleSpans = DashboardGridMetrics.consoleSpans(availableWidth: availableWidth, count: subviews.count)
+        let cols = consoleSpans == nil ? columnCount(for: availableWidth) : 20
         let tileW = tileWidth(containerWidth: availableWidth, cols: cols)
-        let spans = assignSpans(subviews: subviews, columns: cols)
+        let spans = consoleSpans ?? assignSpans(subviews: subviews, columns: cols)
         cache.entries[availableWidth] = DashboardLayoutEntry(
             columns: cols,
             tileWidth: tileW,
@@ -192,9 +193,7 @@ private extension DashboardLayout {
 
     /// Metric tiles are intentionally fixed-height, so row height depends only on row count.
     func rowHeights(spans: [Int], columns: Int) -> [CGFloat] {
-        Array(
-            repeating: MetricTileLayoutMetrics.height,
-            count: DashboardGridMetrics.rowCount(spans: spans, columns: columns)
-        )
+        let count = DashboardGridMetrics.rowCount(spans: spans, columns: columns)
+        return Array(repeating: MetricTileLayoutMetrics.height, count: count)
     }
 }

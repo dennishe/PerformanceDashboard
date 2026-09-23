@@ -57,6 +57,16 @@ final class HostedBatteryAccessoryRowView: NSView {
         layoutRowSubviews()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard let row else { return }
+        self.row = nil
+        symbolState = nil
+        badgeState = nil
+        valueState = nil
+        update(row: row, isProminent: isProminent, displayScale: currentScale)
+    }
+
     func update(row: BatteryTileGaugeRow, isProminent: Bool, displayScale: CGFloat) {
         guard self.row != row
             || self.isProminent != isProminent
@@ -70,7 +80,9 @@ final class HostedBatteryAccessoryRowView: NSView {
 
         let kind = BatteryAccessoryKind.infer(from: row.name)
         let badge = BatteryAccessoryKind.componentBadge(for: row.name) ?? ""
-        let valueColor = LayerColorComponents.threshold(row.thresholdLevel).nsColor()
+        let valueColor = DashboardPalette.accent(
+            title: "Battery", level: row.thresholdLevel, appearance: effectiveAppearance
+        )
 
         updateTileSymbolView(
             glyphView,

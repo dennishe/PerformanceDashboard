@@ -19,10 +19,14 @@ struct LayerTextStyle: Equatable {
     }
 
     @MainActor
-    func textAttributes() -> [NSAttributedString.Key: Any] {
-        [
+    func textAttributes(appearance: NSAppearance = NSApp.effectiveAppearance) -> [NSAttributedString.Key: Any] {
+        var resolvedColor = color
+        appearance.performAsCurrentDrawingAppearance {
+            resolvedColor = color.usingColorSpace(.deviceRGB) ?? color
+        }
+        return [
             .font: font(),
-            .foregroundColor: color,
+            .foregroundColor: resolvedColor,
             .kern: kerning,
             .paragraphStyle: paragraphStyle()
         ]

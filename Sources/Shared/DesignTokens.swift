@@ -1,4 +1,42 @@
 import SwiftUI
+import AppKit
+
+enum DashboardPalette {
+    static func accent(title: String, level: ThresholdLevel, dark: Bool) -> NSColor {
+        switch level {
+        case .warning: return .systemOrange
+        case .critical: return .systemRed
+        case .inactive: return .secondaryLabelColor
+        case .normal: break
+        }
+
+        let rgb: UInt32
+        switch title {
+        case "GPU": rgb = dark ? 0x56C8E1 : 0x1B6D91
+        case "Memory", "Power", "Temp", "Temperature": rgb = dark ? 0xE9B86B : 0x975F22
+        case "Disk": rgb = dark ? 0xEF9B68 : 0xAA5226
+        case "ANE", "Media Engine": rgb = dark ? 0x6FBBC8 : 0x2C7180
+        case "Wireless": rgb = dark ? 0x8AA2A5 : 0x526C6F
+        default: rgb = dark ? 0x67DBB5 : 0x137C69
+        }
+        return NSColor(
+            srgbRed: CGFloat((rgb >> 16) & 0xFF) / 255,
+            green: CGFloat((rgb >> 8) & 0xFF) / 255,
+            blue: CGFloat(rgb & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+
+    static func accent(title: String, level: ThresholdLevel, appearance: NSAppearance) -> NSColor {
+        accent(title: title, level: level, dark: appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+    }
+
+    static func color(title: String, level: ThresholdLevel) -> Color {
+        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+            accent(title: title, level: level, appearance: appearance)
+        }))
+    }
+}
 
 enum DashboardDesign {
     enum FontSize {

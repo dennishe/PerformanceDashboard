@@ -51,4 +51,13 @@ struct LayerColorComponents: Hashable {
         case .inactive: .inactive
         }
     }
+
+    static func metric(_ model: MetricTileModel, dark: Bool) -> LayerColorComponents {
+        let color = DashboardPalette.accent(title: model.title, level: model.thresholdLevel, dark: dark)
+        return LayerColorComponents(nsColor: color)
+    }
+
+    static func upload(dark: Bool) -> LayerColorComponents {
+        LayerColorComponents(nsColor: DashboardPalette.accent(title: "GPU", level: .normal, dark: dark))
+    }
 }

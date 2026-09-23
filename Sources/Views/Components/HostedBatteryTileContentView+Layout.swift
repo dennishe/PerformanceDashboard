@@ -15,8 +15,8 @@ extension HostedBatteryTileContentView {
     }
 
     func layoutPrimaryBatteryContent(in bounds: CGRect) {
-        let meterFrame = CGRect(x: bounds.maxX - 46, y: 34, width: 40, height: 16)
-        let accessoryTop: CGFloat = 72
+        let meterFrame = CGRect(x: bounds.maxX - 46, y: 56, width: 40, height: 16)
+        let accessoryTop: CGFloat = 94
         let accessoryFrame = CGRect(
             x: 0,
             y: accessoryTop,
@@ -28,7 +28,7 @@ extension HostedBatteryTileContentView {
 
         let insetFrame = accessoryFrame.insetBy(
             dx: DashboardDesign.Spacing.compact,
-            dy: 8
+            dy: 6
         )
         layoutAccessoryContent(in: insetFrame, isProminent: false)
     }
@@ -38,7 +38,7 @@ extension HostedBatteryTileContentView {
         accessoryContainerLayer.frame = .zero
         accessoryContainerBorderLayer.frame = .zero
         layoutAccessoryContent(
-            in: CGRect(x: 0, y: 26, width: bounds.width, height: bounds.height - 26),
+            in: CGRect(x: 0, y: 52, width: bounds.width, height: bounds.height - 52),
             isProminent: true
         )
     }
@@ -73,13 +73,13 @@ private extension HostedBatteryTileContentView {
 
         setFrameIfNeeded(
             primaryLabelLayer,
-            frame: CGRect(x: 0, y: 22, width: textWidth, height: Styles.primaryLabel.lineHeight)
+            frame: CGRect(x: 0, y: 42, width: textWidth, height: Styles.primaryLabel.lineHeight)
         )
         setFrameIfNeeded(
             primaryValueLayer,
             frame: CGRect(
                 x: 0,
-                y: 32,
+                y: 54,
                 width: textWidth,
                 height: Styles.primaryValue(color: .labelColor).lineHeight
             )
@@ -88,7 +88,7 @@ private extension HostedBatteryTileContentView {
             primaryStatusLayer,
             frame: CGRect(
                 x: 0,
-                y: 59,
+                y: 81,
                 width: max(0, bounds.width - 4),
                 height: Styles.primaryStatus.lineHeight
             )
@@ -111,24 +111,19 @@ private extension HostedBatteryTileContentView {
     }
 
     func layoutHeader(in bounds: CGRect) {
-        let iconSize: CGFloat = 14
-        let titleX = iconSize + DashboardDesign.Spacing.small
         let headerValueWidth: CGFloat = 52
-        let titleWidth = max(
-            0,
-            bounds.width - titleX - headerValueWidth - DashboardDesign.Spacing.small
-        )
-
-        setFrameIfNeeded(iconView, frame: CGRect(x: 0, y: 0, width: iconSize, height: iconSize))
+        setFrameIfNeeded(iconView, frame: MetricTileLayoutMetrics.iconFrame())
         setFrameIfNeeded(
             titleLayer,
-            frame: CGRect(x: titleX, y: 1, width: titleWidth, height: Styles.headerTitle.lineHeight)
+            frame: MetricTileLayoutMetrics.titleFrame(
+                width: bounds.width, trailingWidth: headerValueWidth, lineHeight: Styles.headerTitle.lineHeight
+            )
         )
         setFrameIfNeeded(
             headerValueLayer,
             frame: CGRect(
                 x: bounds.maxX - headerValueWidth,
-                y: 0,
+                y: (MetricTileLayoutMetrics.ringGaugeSize - Styles.headerValue(color: .labelColor).lineHeight) / 2,
                 width: headerValueWidth,
                 height: Styles.headerValue(color: .labelColor).lineHeight
             )

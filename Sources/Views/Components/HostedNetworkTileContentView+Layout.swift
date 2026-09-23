@@ -3,7 +3,7 @@ import AppKit
 extension HostedNetworkTileContentView {
     func layoutSubviews() {
         let bounds = bounds.integral
-        let row1Y = HostedNetworkTileLayout.headerHeight + DashboardDesign.Spacing.xSmall
+        let row1Y = HostedNetworkTileLayout.headerHeight + DashboardDesign.Spacing.large + 2
         let row2Y = row1Y + HostedNetworkTileStyles.body.lineHeight + DashboardDesign.Spacing.xSmall
         let sparklineY = bounds.height - HostedNetworkTileLayout.sparklineHeight
 
@@ -19,21 +19,10 @@ extension HostedNetworkTileContentView {
             width: MetricTileLayoutMetrics.ringGaugeSize,
             height: MetricTileLayoutMetrics.ringGaugeSize
         )
-        let titleStartX = HostedNetworkTileLayout.iconSize + DashboardDesign.Spacing.small
-        let titleWidth = max(0, ringFrame.minX - DashboardDesign.Spacing.small - titleStartX)
-
-        setFrameIfNeeded(iconView, frame: CGRect(
-            x: 0,
-            y: (HostedNetworkTileLayout.headerHeight - HostedNetworkTileLayout.iconSize) / 2,
-            width: HostedNetworkTileLayout.iconSize,
-            height: HostedNetworkTileLayout.iconSize
-        ))
+        setFrameIfNeeded(iconView, frame: MetricTileLayoutMetrics.iconFrame())
         setFrameIfNeeded(ringGauge.view, frame: ringFrame)
-        setFrameIfNeeded(titleLayer, frame: CGRect(
-            x: titleStartX,
-            y: (HostedNetworkTileLayout.headerHeight - HostedNetworkTileStyles.title.lineHeight) / 2,
-            width: titleWidth,
-            height: HostedNetworkTileStyles.title.lineHeight
+        setFrameIfNeeded(titleLayer, frame: MetricTileLayoutMetrics.titleFrame(
+            width: bounds.width, trailingWidth: ringFrame.width, lineHeight: HostedNetworkTileStyles.title.lineHeight
         ))
     }
 

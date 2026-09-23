@@ -39,7 +39,9 @@ struct CoreDetailBarsView: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(.quaternary)
                     Capsule()
-                        .fill(Color.threshold(MetricThresholds.cpu.level(for: item.gaugeValue)))
+                        .fill(DashboardPalette.color(
+                            title: "CPU", level: MetricThresholds.cpu.level(for: item.gaugeValue)
+                        ))
                         .frame(width: geometry.size.width * min(max(item.gaugeValue, 0), 1))
                 }
             }

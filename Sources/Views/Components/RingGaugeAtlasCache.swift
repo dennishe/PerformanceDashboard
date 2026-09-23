@@ -3,10 +3,12 @@ import AppKit
 struct RingGaugeAtlasKey: Hashable {
     let displayScaleKey: Int
     let profile: GaugeColorProfile
+    let color: LayerColorComponents
 
     init(style: RingGaugeStyle) {
         self.displayScaleKey = Int((style.displayScale * 100).rounded())
         self.profile = style.profile
+        self.color = style.color
     }
 
     var scale: CGFloat {
@@ -71,6 +73,6 @@ private extension RingGaugeAtlasCache {
     }
 
     func cacheKey(for key: RingGaugeAtlasKey) -> String {
-        "\(key.displayScaleKey)-\(key.profile)"
+        "\(key.displayScaleKey)-\(key.profile)-\(key.color)"
     }
 }

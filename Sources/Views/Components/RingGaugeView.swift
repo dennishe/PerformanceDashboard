@@ -1,7 +1,7 @@
 import AppKit
 
 enum RingGaugeGeometry {
-    static let displayDiameter: CGFloat = 34
+    static let displayDiameter: CGFloat = MetricTileLayoutMetrics.ringGaugeSize
 
     private static let renderDiameter: CGFloat = 42
     private static let renderStrokeWidth: CGFloat = 5

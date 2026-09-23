@@ -88,6 +88,22 @@ final class HostedBatteryTileContentView: NSView {
         layoutTileSubviews()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard let model else { return }
+        self.model = nil
+        titleState = nil
+        headerValueState = nil
+        primaryLabelState = nil
+        primaryValueState = nil
+        primaryStatusState = nil
+        accessoryTitleState = nil
+        accessoryCountState = nil
+        emptyMessageState = nil
+        iconState = nil
+        update(model: model, displayScale: currentScale)
+    }
+
     func update(model: BatteryTileModel, displayScale: CGFloat) {
         guard self.model != model || currentScale != displayScale else { return }
 
@@ -95,7 +111,9 @@ final class HostedBatteryTileContentView: NSView {
         currentScale = displayScale
         lastLaidOutBounds = .null
 
-        let thresholdColor = LayerColorComponents.threshold(model.thresholdLevel).nsColor()
+        let thresholdColor = DashboardPalette.accent(
+            title: "Battery", level: model.thresholdLevel, appearance: effectiveAppearance
+        )
 
         applyHeaderText(displayScale: displayScale, thresholdColor: thresholdColor)
         applyPrimaryContent(model: model, displayScale: displayScale, thresholdColor: thresholdColor)

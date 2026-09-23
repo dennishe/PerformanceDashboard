@@ -76,18 +76,32 @@ final class HostedMetricTileContentView: NSView {
         layoutSubviews()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard let currentModel else { return }
+        self.currentModel = nil
+        titleState = nil
+        valueState = nil
+        subtitleState = nil
+        iconState = nil
+        update(model: currentModel, displayScale: currentScale)
+    }
+
     func update(model: MetricTileModel, displayScale: CGFloat) {
         guard currentModel != model || currentScale != displayScale else { return }
 
         currentModel = model
         currentScale = displayScale
 
-        let layerColor = model.gaugeValue == nil ? LayerColorComponents.inactive : .threshold(model.thresholdLevel)
+        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let layerColor = model.gaugeValue == nil ? LayerColorComponents.inactive : .metric(model, dark: isDark)
         let subtitleText = subtitle(for: model)
 
         applyTextContent(
             model: model,
-            valueTextStyle: valueTextStyle(for: model),
+            valueTextStyle: model.thresholdLevel == .normal
+                ? PreparedTileTextStyle(style: LayerTextStyle.tileValue(color: layerColor.nsColor()))
+                : valueTextStyle(for: model),
             subtitleText: subtitleText,
             displayScale: displayScale
         )
@@ -150,26 +164,16 @@ private extension HostedMetricTileContentView {
             width: MetricTileLayoutMetrics.ringGaugeSize,
             height: MetricTileLayoutMetrics.ringGaugeSize
         )
-        let titleStartX = Layout.iconSize + DashboardDesign.Spacing.small
-        let titleWidth = max(0, ringFrame.minX - DashboardDesign.Spacing.small - titleStartX)
         let sparklineY = bounds.height - Layout.sparklineHeight
 
-        setFrameIfNeeded(iconView, frame: CGRect(
-            x: 0,
-            y: (headerFrame.height - Layout.iconSize) / 2,
-            width: Layout.iconSize,
-            height: Layout.iconSize
-        ))
+        setFrameIfNeeded(iconView, frame: MetricTileLayoutMetrics.iconFrame())
         setFrameIfNeeded(ringGauge.view, frame: ringFrame)
-        setFrameIfNeeded(titleLayer, frame: CGRect(
-            x: titleStartX,
-            y: (headerFrame.height - Styles.title.lineHeight) / 2,
-            width: titleWidth,
-            height: Styles.title.lineHeight
+        setFrameIfNeeded(titleLayer, frame: MetricTileLayoutMetrics.titleFrame(
+            width: bounds.width, trailingWidth: ringFrame.width, lineHeight: Styles.title.lineHeight
         ))
         setFrameIfNeeded(valueLayer, frame: CGRect(
             x: 0,
-            y: headerFrame.maxY + DashboardDesign.Spacing.xSmall,
+            y: headerFrame.maxY + DashboardDesign.Spacing.large + 2,
             width: bounds.width,
             height: Styles.valueLayout.lineHeight
         ))

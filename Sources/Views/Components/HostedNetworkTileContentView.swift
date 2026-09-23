@@ -79,6 +79,24 @@ final class HostedNetworkTileContentView: NSView {
         layoutSubviews()
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        guard let currentTileModel, let currentInTileModel, let currentOutTileModel else { return }
+        self.currentTileModel = nil
+        titleState = nil
+        downArrowState = nil
+        downValueState = nil
+        upArrowState = nil
+        upValueState = nil
+        iconState = nil
+        update(
+            tileModel: currentTileModel,
+            inTileModel: currentInTileModel,
+            outTileModel: currentOutTileModel,
+            displayScale: currentScale
+        )
+    }
+
     func update(
         tileModel: MetricTileModel,
         inTileModel: MetricTileModel,
@@ -97,7 +115,8 @@ final class HostedNetworkTileContentView: NSView {
         currentOutTileModel = outTileModel
         currentScale = displayScale
 
-        let color = LayerColorComponents.threshold(tileModel.thresholdLevel)
+        let isDark = effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        let color = LayerColorComponents.metric(tileModel, dark: isDark)
         let tintColor = NSColor.secondaryLabelColor
 
         applyTextContent(
@@ -120,27 +139,6 @@ private extension HostedNetworkTileContentView {
     func applyTextContent(tintColor: NSColor, inValue: String, outValue: String, displayScale: CGFloat) {
         applyHeaderText(tintColor: tintColor, displayScale: displayScale)
         applyTransferText(inValue: inValue, outValue: outValue, displayScale: displayScale)
-    }
-
-    func applyChartContent(
-        color: LayerColorComponents,
-        tileModel: MetricTileModel,
-        inTileModel: MetricTileModel,
-        outTileModel: MetricTileModel,
-        displayScale: CGFloat
-    ) {
-        ringGauge.update(
-            tileModel.gaugeValue ?? 0,
-            RingGaugeStyle(color: color, displayScale: displayScale, profile: tileModel.gaugeColorProfile)
-        )
-        downloadSparklineView.update(
-            history: inTileModel.history,
-            style: SparklineStyle(color: .normal, displayScale: displayScale)
-        )
-        uploadSparklineView.update(
-            history: outTileModel.history,
-            style: SparklineStyle(color: .blue, displayScale: displayScale, showFill: false)
-        )
     }
 
     func applyHeaderText(tintColor: NSColor, displayScale: CGFloat) {

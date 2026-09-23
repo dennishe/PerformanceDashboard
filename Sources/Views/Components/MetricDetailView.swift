@@ -19,21 +19,9 @@ struct MetricDetailView: View {
                 statsSection(stats: model.stats)
             }
         }
-        .background(Color.tileSurface, in: RoundedRectangle(cornerRadius: 18))
+        .background(Color.tileSurface, in: RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.tileBorder))
         .shadow(color: .black.opacity(DashboardDesign.Opacity.modalScrim), radius: 40, y: 12)
-        .overlay(alignment: .topTrailing) {
-            Button { onDismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .medium))
-                    .foregroundStyle(.tertiary)
-                    .padding(5)
-                    .background(.quaternary, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
-            .padding(.top, DashboardDesign.Spacing.compact)
-            .padding(.trailing, DashboardDesign.Spacing.regular)
-        }
     }
 
     private var showsSupplementarySections: Bool {
@@ -51,10 +39,10 @@ struct MetricDetailView: View {
         return 270 + statHeight + supplementaryHeight
     }
 
-    // MARK: - Header (single compact bar, close button lives in body overlay)
+    // MARK: - Header
 
     private func headerRow(model: DetailModel) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 12) {
             Image(systemName: model.systemImage)
                 .font(.system(size: DashboardDesign.FontSize.tileControl, weight: .semibold))
                 .foregroundStyle(.secondary)
@@ -65,7 +53,7 @@ struct MetricDetailView: View {
                     .system(size: DashboardDesign.FontSize.tileHeader, weight: .semibold, design: .rounded)
                         .monospacedDigit()
                 )
-                .foregroundStyle(Color.threshold(model.thresholdLevel))
+                .foregroundStyle(DashboardPalette.color(title: model.title, level: model.thresholdLevel))
                 .contentTransition(.numericText())
                 .padding(.leading, 2)
             Spacer(minLength: 8)
@@ -76,12 +64,19 @@ struct MetricDetailView: View {
             } label: { EmptyView() }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 148)
+            .fixedSize(horizontal: true, vertical: false)
             .accessibilityLabel("Time range")
+            Button { onDismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: DashboardDesign.FontSize.tileSubtitle, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 24, height: 24)
+                    .background(.quaternary, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
         }
-        // Right padding leaves space for the floating close button overlay.
-        .padding(.leading, DashboardDesign.Spacing.large)
-        .padding(.trailing, 52)
+        .padding(.horizontal, DashboardDesign.Spacing.large)
         .padding(.vertical, DashboardDesign.Spacing.compact)
         .overlay(alignment: .bottom) { Divider().opacity(0.4) }
     }
@@ -90,7 +85,9 @@ struct MetricDetailView: View {
 
     private func chartSection(model: DetailModel) -> some View {
         let sliced = model.history.suffix(selectedRange.sampleCount)
-        let layerColor = LayerColorComponents.threshold(model.thresholdLevel)
+        let layerColor = LayerColorComponents(nsColor: DashboardPalette.accent(
+            title: model.title, level: model.thresholdLevel, appearance: NSApp.effectiveAppearance
+        ))
         return HStack(spacing: DashboardDesign.Spacing.regular) {
             SparklineView(
                 history: Array(sliced),
@@ -115,7 +112,7 @@ struct MetricDetailView: View {
     private func supplementarySections(_ sections: [DetailModel.SupplementarySection]) -> some View {
         VStack(spacing: 0) {
             ForEach(sections) { section in
-                DetailSupplementarySectionView(section: section)
+                DetailSupplementarySectionView(section: section, metricTitle: model.title)
             }
         }
     }
@@ -149,8 +146,7 @@ struct MetricDetailView: View {
     }
 }
 
-// MARK: - Time range
-
+    // MARK: - Time range
 private enum TimeRange: CaseIterable {
     case oneMinute, fiveMinutes, fifteenMinutes
 

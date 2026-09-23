@@ -22,7 +22,7 @@ enum RingGaugeAtlasRenderer {
         for frameIndex in 0..<RingGaugeAtlas.frameCount {
             let gaugeValue = CGFloat(frameIndex) / 360
             let style = RingGaugeStyle(
-                color: color(for: key.profile, gaugeValue: gaugeValue),
+                color: color(for: key, gaugeValue: gaugeValue),
                 displayScale: key.scale,
                 profile: key.profile
             )
@@ -45,8 +45,9 @@ enum RingGaugeAtlasRenderer {
 }
 
 private extension RingGaugeAtlasRenderer {
-    static func color(for profile: GaugeColorProfile, gaugeValue: CGFloat) -> LayerColorComponents {
-        LayerColorComponents.threshold(profile.level(for: gaugeValue))
+    static func color(for key: RingGaugeAtlasKey, gaugeValue: CGFloat) -> LayerColorComponents {
+        let level = key.profile.level(for: gaugeValue)
+        return level == .normal ? key.color : LayerColorComponents.threshold(level)
     }
 
     static func frameRect(for frameIndex: Int, frameSize: Int, columns: Int) -> CGRect {

@@ -64,6 +64,12 @@ require_cmd productbuild
 [[ -n "$SIGN_IDENTITY" ]] && require_cmd codesign
 $NOTARIZE && require_cmd xcrun
 
+if [[ -f "$REPO_ROOT/Resources/AppIcon.png" ]]; then
+    require_cmd sips
+    require_cmd iconutil
+    "$REPO_ROOT/scripts/make-icon.sh" "$REPO_ROOT/Resources/AppIcon.png"
+fi
+
 ICON_SRC="$REPO_ROOT/Resources/AppIcon.icns"
 if [[ ! -f "$ICON_SRC" ]]; then
     echo "  ⚠  No AppIcon.icns found in Resources/. Run scripts/make-icon.sh first."

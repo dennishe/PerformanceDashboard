@@ -1,6 +1,11 @@
 import Foundation
 
 enum DashboardGridMetrics {
+    static func consoleSpans(availableWidth: CGFloat, count: Int) -> [Int]? {
+        guard availableWidth >= 1100, count == 12 else { return nil }
+        return [7, 7, 6, 6, 4, 4, 6, 4, 4, 4, 4, 4]
+    }
+
     static func rowCount(spans: [Int], columns: Int) -> Int {
         guard columns > 0, !spans.isEmpty else { return 0 }
 

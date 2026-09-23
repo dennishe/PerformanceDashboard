@@ -115,8 +115,8 @@ final class SparklineHostingView: NSView {
         lineLayer.contentsScale = style.displayScale
         gradientLayer.isHidden = !style.showFill
         gradientLayer.colors = [
-            style.color.cgColor(alphaMultiplier: 0.22),
-            style.color.cgColor(alphaMultiplier: 0.02)
+            style.color.cgColor(alphaMultiplier: 0.10),
+            style.color.cgColor(alphaMultiplier: 0.01)
         ]
         lineLayer.strokeColor = style.color.cgColor()
         CATransaction.commit()

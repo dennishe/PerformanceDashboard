@@ -12,11 +12,29 @@ extension Color {
         }
     }
 
-    /// Tile card surface — uses the macOS semantic controlBackground color,
-    /// which is white in light mode and elevated dark in dark mode.
-    static let tileSurface = Color(nsColor: .controlBackgroundColor)
+    static let tileSurface = adaptive(
+        light: NSColor(srgbRed: 0.98, green: 0.99, blue: 0.98, alpha: 1),
+        dark: NSColor(srgbRed: 24 / 255, green: 39 / 255, blue: 44 / 255, alpha: 1)
+    )
 
-    /// Dashboard window background — uses the macOS semantic windowBackground color,
-    /// which is light gray in light mode and near-black in dark mode.
-    static let dashboardBackground = Color(nsColor: .windowBackgroundColor)
+    static let dashboardBackground = adaptive(
+        light: NSColor(srgbRed: 0.93, green: 0.95, blue: 0.94, alpha: 1),
+        dark: NSColor(srgbRed: 16 / 255, green: 27 / 255, blue: 32 / 255, alpha: 1)
+    )
+
+    static let dashboardTitlebar = adaptive(
+        light: NSColor(srgbRed: 0.98, green: 0.99, blue: 0.98, alpha: 1),
+        dark: NSColor(srgbRed: 21 / 255, green: 36 / 255, blue: 42 / 255, alpha: 1)
+    )
+
+    static let tileBorder = adaptive(
+        light: NSColor(srgbRed: 0.79, green: 0.84, blue: 0.82, alpha: 1),
+        dark: NSColor(srgbRed: 49 / 255, green: 66 / 255, blue: 72 / 255, alpha: 1)
+    )
+
+    private static func adaptive(light: NSColor, dark: NSColor) -> Color {
+        Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
+            appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
+        }))
+    }
 }

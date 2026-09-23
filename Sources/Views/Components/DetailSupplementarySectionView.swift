@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DetailSupplementarySectionView: View {
     let section: DetailModel.SupplementarySection
+    let metricTitle: String
 
     private let columns = [
         GridItem(.flexible(), spacing: DashboardDesign.Spacing.regular),
@@ -55,14 +56,17 @@ struct DetailSupplementarySectionView: View {
                     Capsule()
                         .fill(.quaternary.opacity(0.7))
                     Capsule()
-                        .fill(Color.threshold(thresholdLevel(for: item.gaugeValue)))
+                        .fill(DashboardPalette.color(
+                            title: metricTitle, level: thresholdLevel(for: item.gaugeValue)
+                        ))
                         .frame(width: proxy.size.width * min(max(item.gaugeValue, 0), 1))
                 }
             }
             .frame(height: 6)
         }
         .padding(DashboardDesign.Spacing.regular)
-        .background(Color.primary.opacity(DashboardDesign.Opacity.tileChrome), in: RoundedRectangle(cornerRadius: 12))
+        .background(Color.dashboardBackground, in: RoundedRectangle(cornerRadius: 3))
+        .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Color.tileBorder))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(for: item))
     }

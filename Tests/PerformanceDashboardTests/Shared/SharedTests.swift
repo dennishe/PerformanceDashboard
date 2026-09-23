@@ -1,5 +1,6 @@
 import Testing
 import SwiftUI
+import AppKit
 @testable import PerformanceDashboard
 
 struct ColorThresholdTests {
@@ -13,6 +14,29 @@ struct ColorThresholdTests {
 
     @Test func color_critical_isRed() {
         #expect(Color.threshold(.critical) == .red)
+    }
+
+    @Test @MainActor func dashboardColors_followSystemAppearance() throws {
+        let lightAppearance = try #require(NSAppearance(named: .aqua))
+        let darkAppearance = try #require(NSAppearance(named: .darkAqua))
+
+        func brightness(_ color: Color, in appearance: NSAppearance) -> CGFloat? {
+            var value: CGFloat?
+            appearance.performAsCurrentDrawingAppearance {
+                value = NSColor(color).usingColorSpace(.deviceRGB)?.brightnessComponent
+            }
+            return value
+        }
+
+        let lightTile = try #require(brightness(.tileSurface, in: lightAppearance))
+        let darkTile = try #require(brightness(.tileSurface, in: darkAppearance))
+        let lightBackground = try #require(brightness(.dashboardBackground, in: lightAppearance))
+        let darkBackground = try #require(brightness(.dashboardBackground, in: darkAppearance))
+
+        #expect(lightTile > darkTile)
+        #expect(lightBackground > darkBackground)
+        #expect(lightTile > lightBackground)
+        #expect(darkTile > darkBackground)
     }
 }
 

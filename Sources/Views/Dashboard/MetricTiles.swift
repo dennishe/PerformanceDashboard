@@ -15,7 +15,9 @@ struct NetworkTileView: View, Equatable {
             outTileModel: models.outTileModel
         )
         .frame(height: MetricTileLayoutMetrics.contentHeight, alignment: .top)
-        .padding(MetricTileLayoutMetrics.padding)
+        .padding(.horizontal, MetricTileLayoutMetrics.padding)
+        .padding(.top, MetricTileLayoutMetrics.topPadding)
+        .padding(.bottom, MetricTileLayoutMetrics.padding)
         .tileCard()
     }
 }

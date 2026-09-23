@@ -7,7 +7,9 @@ struct MetricTileView: View, Equatable {
     var body: some View {
         HostedMetricTileContentRepresentable(model: model)
         .frame(height: MetricTileLayoutMetrics.contentHeight, alignment: .top)
-        .padding(MetricTileLayoutMetrics.padding)
+        .padding(.horizontal, MetricTileLayoutMetrics.padding)
+        .padding(.top, MetricTileLayoutMetrics.topPadding)
+        .padding(.bottom, MetricTileLayoutMetrics.padding)
         .tileCard()
     }
 }

@@ -42,11 +42,13 @@ struct DashboardView: View {
     // MARK: - Tile grid
 
     private var tileGrid: some View {
-        DashboardLayout(
-            spacing: 12,
-            minTileWidth: settings.densityPreset.minTileWidth,
-            onContentHeightChange: updateContentHeight
-        ) {
+        VStack(spacing: 0) {
+            DashboardOverviewHeader()
+            DashboardLayout(
+                spacing: 12,
+                minTileWidth: settings.densityPreset.minTileWidth,
+                onContentHeightChange: updateContentHeight
+            ) {
             if settings.isVisible(.cpu) {
                 ObservedMetricTileButton(
                     viewModel: services.cpu,
@@ -121,6 +123,7 @@ struct DashboardView: View {
                     action: { detailSelection = .wireless }
                 )
             }
+            }
         }
         .background(Color.dashboardBackground.ignoresSafeArea())
         .background(TitlebarConfigurator(
@@ -183,7 +186,7 @@ struct DashboardView: View {
 
     @MainActor
     private func updateContentHeight(_ height: CGFloat) {
-        let rounded = height.rounded(.up)
+        let rounded = (height + 60).rounded(.up)
         guard rounded > 0, abs(contentHeight - rounded) > 0.5 else { return }
         contentHeight = rounded
     }

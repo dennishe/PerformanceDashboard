@@ -33,6 +33,7 @@ struct TitlebarConfigurator: NSViewRepresentable {
 
     @MainActor
     final class Coordinator {
+        private var backdropView: NSView?
         private var titleView: NSView?
         private var settingsButtonView: NSView?
         private var popover: NSPopover?
@@ -42,10 +43,16 @@ struct TitlebarConfigurator: NSViewRepresentable {
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
             window.styleMask.insert(.fullSizeContentView)
-            window.backgroundColor = .windowBackgroundColor
+            window.backgroundColor = NSColor(Color.dashboardTitlebar)
 
             guard let closeButton = window.standardWindowButton(.closeButton),
                   let titlebarContainer = closeButton.superview else { return }
+
+            backdropView?.removeFromSuperview()
+            let backdrop = DashboardTitlebarBackdrop(frame: titlebarContainer.bounds)
+            backdrop.autoresizingMask = [.width, .height]
+            titlebarContainer.addSubview(backdrop, positioned: .below, relativeTo: nil)
+            backdropView = backdrop
 
             // Leading: "Performance •" status label
             titleView?.removeFromSuperview()
