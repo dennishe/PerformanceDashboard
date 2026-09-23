@@ -10,7 +10,7 @@ struct FanViewModelDetailTests {
         ])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.detailModel.stats.count == 1)
         #expect(viewModel.detailModel.stats[0].label == "Fan 1")
@@ -21,7 +21,7 @@ struct FanViewModelDetailTests {
         monitor.snapshots = [FanSnapshot(fans: [])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.tileModel.unavailableReason == "No fans detected")
     }
@@ -31,7 +31,7 @@ struct FanViewModelDetailTests {
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]
         let viewModel = FanViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.tileModel.unavailableReason == nil)
     }

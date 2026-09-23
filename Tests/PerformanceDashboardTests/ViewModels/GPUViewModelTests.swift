@@ -9,7 +9,7 @@ struct GPUViewModelTests {
         let viewModel = GPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usage == 0.55)
     }
@@ -20,7 +20,7 @@ struct GPUViewModelTests {
         let viewModel = GPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usageLabel == "N/A")
     }
@@ -39,7 +39,7 @@ struct GPUViewModelTests {
         let viewModel = GPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
@@ -54,7 +54,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: 0.75)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.usageLabel == "75.0%")
     }
 
@@ -63,7 +63,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: 0.65)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 1)
         #expect(viewModel.detailModel.stats[0].label == "Utilisation")
         #expect(viewModel.detailModel.stats[0].value == "65.0%")
@@ -74,7 +74,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: nil)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.isEmpty)
     }
 
@@ -83,7 +83,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: nil)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.unavailableReason == "GPU stats unavailable")
     }
 
@@ -92,7 +92,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: 0.5)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.unavailableReason == nil)
     }
 
@@ -101,7 +101,7 @@ struct GPUViewModelTests {
         monitor.snapshots = [GPUSnapshot(usage: nil)]
         let viewModel = GPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.gaugeValue == nil)
     }
 

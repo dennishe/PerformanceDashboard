@@ -9,7 +9,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.inLabel.contains("/s"))
         #expect(viewModel.outLabel.contains("/s"))
@@ -24,7 +24,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates(cycles: 2)
+        await viewModel.waitForUpdates(atLeast: 2)
 
         #expect(viewModel.historyIn.count == Constants.historySamples)
         #expect(viewModel.historyOut.count == Constants.historySamples)
@@ -50,7 +50,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.inGauge == 1.0)
         #expect(viewModel.outGauge == 1.0)
@@ -62,7 +62,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.inGauge == 0.5)
         #expect(viewModel.outGauge == 0.25)
@@ -74,7 +74,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let inBeforeStop = viewModel.bytesInPerSecond
         viewModel.stop()
 
@@ -96,7 +96,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.inTileModel.title == "Net In")
         #expect(viewModel.inTileModel.systemImage == "arrow.down.circle")
@@ -114,7 +114,7 @@ struct NetworkViewModelTests {
         let viewModel = NetworkViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.tileModel.title == "Network")
         #expect(viewModel.tileModel.subtitle == "↓ \(viewModel.inLabel)  ↑ \(viewModel.outLabel)")

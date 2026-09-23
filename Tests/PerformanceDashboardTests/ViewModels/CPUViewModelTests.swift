@@ -10,7 +10,7 @@ struct CPUViewModelTests {
 
         viewModel.start()
         // Allow the async stream to emit
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usage == 0.75)
     }
@@ -21,7 +21,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usageLabel == "50.0%")
     }
@@ -32,7 +32,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates(cycles: 2)
+        await viewModel.waitForUpdates(atLeast: 70)
 
         #expect(viewModel.history.count <= Constants.historySamples)
     }
@@ -55,7 +55,7 @@ struct CPUViewModelTests {
         let viewModel = CPUViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
@@ -71,7 +71,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [])]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.topProcesses.isEmpty)
     }
 
@@ -81,7 +81,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [process])]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.topProcesses.count == 1)
         #expect(viewModel.topProcesses[0].name == "Safari")
         #expect(viewModel.topProcesses[0].fraction == 0.25)
@@ -97,7 +97,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.65, topProcesses: processes)]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.topProcesses.count == 3)
         #expect(viewModel.topProcesses[0].name == "Safari")
     }
@@ -107,7 +107,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.4, topProcesses: [])]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 1)
         #expect(viewModel.detailModel.stats[0].label == "Usage")
         #expect(viewModel.detailModel.stats[0].value == "40.0%")
@@ -122,7 +122,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.2, topProcesses: processes)]
         let viewModel = CPUViewModel(monitor: monitor, processorCount: 4)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 3)
         #expect(viewModel.detailModel.stats[0].label == "Chrome")
         #expect(viewModel.detailModel.stats[0].value == "10.0%")
@@ -141,7 +141,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.15, topProcesses: processes)]
         let viewModel = CPUViewModel(monitor: monitor, processorCount: 4)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.detailModel.stats.count == 2)
     }
@@ -151,7 +151,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.6)]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.title == "CPU")
         #expect(viewModel.detailModel.systemImage == "cpu")
         #expect(viewModel.detailModel.primaryValue == "60.0%")
@@ -166,7 +166,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.6, cores: cores)]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.detailModel.supplementarySections.count == 1)
         #expect(viewModel.detailModel.supplementaryPlacement == .besideChart)
@@ -182,7 +182,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [process])]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.topProcesses[0].percentLabel == "12.3%")
     }
 
@@ -191,7 +191,7 @@ struct CPUViewModelTests {
         monitor.snapshots = [CPUSnapshot(usage: 0.5, topProcesses: [ProcessCPUStat(name: "", fraction: 0.1)])]
         let viewModel = CPUViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.topProcesses[0].name.isEmpty)
         #expect(viewModel.detailModel.stats[0].label.isEmpty)
     }

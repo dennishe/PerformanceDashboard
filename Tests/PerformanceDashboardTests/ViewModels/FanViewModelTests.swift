@@ -7,9 +7,7 @@ struct FanViewModelTests {
     @Test func fans_updatesFromStream() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.fans.count == 1)
         #expect(viewModel.fans[0].current == 1200)
     }
@@ -24,9 +22,7 @@ struct FanViewModelTests {
     @Test func gaugeValue_returnsFraction_forSingleFan() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.gaugeValue == 0.5)
     }
 
@@ -36,18 +32,14 @@ struct FanViewModelTests {
             FanReading(current: 3000, max: 6000),  // 0.5
             FanReading(current: 4800, max: 6000)   // 0.8
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.gaugeValue == 0.8)
     }
 
     @Test func primaryLabel_showsNoFans_whenEmpty() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.primaryLabel == "No fans")
     }
 
@@ -57,9 +49,7 @@ struct FanViewModelTests {
             FanReading(current: 1200, max: 6000),
             FanReading(current: 2400, max: 6000)
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.primaryLabel == "2400 RPM")
     }
 
@@ -73,9 +63,7 @@ struct FanViewModelTests {
     @Test func subtitle_showsSingleFanDetail() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.subtitle == "F0: 1200 / 6000")
     }
 
@@ -85,45 +73,35 @@ struct FanViewModelTests {
             FanReading(current: 1200, max: 6000),
             FanReading(current: 2400, max: 6000)
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.subtitle == "F0: 1200 / 6000 · F1: 2400 / 6000")
     }
 
     @Test func thresholdLevel_inactive_whenNoFans() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.thresholdLevel == .inactive)
     }
 
     @Test func thresholdLevel_normal_forLowFanSpeed() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5 < 0.7
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.thresholdLevel == .normal)
     }
 
     @Test func thresholdLevel_critical_forHighFanSpeed() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 5700, max: 6000)])]  // 0.95 > 0.9
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.thresholdLevel == .critical)
     }
 
     @Test func history_appendsFanFraction() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 3000, max: 6000)])]  // 0.5
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(abs((viewModel.history.last ?? -1) - 0.5) < 0.001)
     }
@@ -131,9 +109,7 @@ struct FanViewModelTests {
     @Test func stop_haltsUpdates() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 1200, max: 6000)])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         let countBeforeStop = viewModel.fans.count
         viewModel.stop()
         await waitForAsyncUpdates()
@@ -145,9 +121,7 @@ struct FanViewModelTests {
     @Test func gaugeValue_clampedToOne_whenCurrentExceedsMax() async {
         let monitor = MockMonitor<FanSnapshot>()
         monitor.snapshots = [FanSnapshot(fans: [FanReading(current: 7000, max: 6000)])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.gaugeValue == 1.0)
     }
 
@@ -158,9 +132,7 @@ struct FanViewModelTests {
             FanReading(current: 4000, max: 6000),
             FanReading(current: 3000, max: 6000)
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         let expected = 5000.0 / 6000.0
         #expect(abs((viewModel.gaugeValue ?? 0) - expected) < 0.001)
     }
@@ -172,9 +144,7 @@ struct FanViewModelTests {
             FanReading(current: 2200, max: 6000),
             FanReading(current: 1800, max: 6000)
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.primaryLabel == "2200 RPM")
     }
 
@@ -185,9 +155,15 @@ struct FanViewModelTests {
             FanReading(current: 2400, max: 6000),
             FanReading(current: 3600, max: 6000)
         ])]
-        let viewModel = FanViewModel(monitor: monitor)
-        viewModel.start()
-        await waitForAsyncUpdates()
+        let viewModel = await startAndWait(monitor)
         #expect(viewModel.subtitle == "F0: 1200 / 6000 · F1: 2400 / 6000 · F2: 3600 / 6000")
+    }
+
+    private func startAndWait(_ monitor: MockMonitor<FanSnapshot>) async -> FanViewModel {
+        let batcher = SynchronousBatcher()
+        let viewModel = FanViewModel(monitor: monitor, batcher: batcher)
+        viewModel.start()
+        await batcher.waitForUpdate()
+        return viewModel
     }
 }

@@ -15,7 +15,7 @@ struct BatteryViewModelTileTests {
         ])
         let viewModel = BatteryViewModel(monitor: monitor, peripheralBatteryProvider: provider)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         await viewModel.refreshConnectedDeviceBatteries()
 
@@ -38,7 +38,7 @@ struct BatteryViewModelTileTests {
         ])
         let viewModel = BatteryViewModel(monitor: monitor, peripheralBatteryProvider: provider)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         await viewModel.refreshConnectedDeviceBatteries()
 
@@ -93,7 +93,7 @@ struct BatteryViewModelTileTests {
         ])
         let viewModel = BatteryViewModel(monitor: monitor, peripheralBatteryProvider: provider)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         await viewModel.refreshConnectedDeviceBatteries()
 
         let model = BatteryTileModel(viewModel: viewModel)

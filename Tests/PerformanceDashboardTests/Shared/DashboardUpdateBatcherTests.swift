@@ -15,7 +15,7 @@ struct DashboardUpdateBatcherTests {
 
         #expect(updates.isEmpty)
 
-        try? await Task.sleep(for: .milliseconds(20))
+        await batcher.waitUntilFlushed()
 
         #expect(updates == [1, 2])
     }
@@ -28,7 +28,7 @@ struct DashboardUpdateBatcherTests {
         batcher.enqueue(owner: owner) { ranUpdate = true }
         batcher.cancel(owner: owner)
 
-        try? await Task.sleep(for: .milliseconds(20))
+        await batcher.waitUntilFlushed()
 
         #expect(ranUpdate == false)
     }

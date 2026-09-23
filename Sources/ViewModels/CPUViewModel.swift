@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
     private let processorCount: Int
+    private let processSampler: (any CPUProcessSamplingControlling)?
     private var lastSnapshot = CPUSnapshot(usage: 0)
 
     public var usage: Double { lastSnapshot.usage }
@@ -19,6 +20,7 @@ public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
         batcher: any UpdateScheduling = DashboardUpdateBatcher.shared
     ) {
         processorCount = max(ProcessInfo.processInfo.activeProcessorCount, 1)
+        processSampler = monitor as? any CPUProcessSamplingControlling
         super.init(monitor: monitor, batcher: batcher)
     }
 
@@ -28,7 +30,12 @@ public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
         processorCount: Int
     ) {
         self.processorCount = max(processorCount, 1)
+        processSampler = monitor as? any CPUProcessSamplingControlling
         super.init(monitor: monitor, batcher: batcher)
+    }
+
+    func setProcessSamplingEnabled(_ enabled: Bool) async {
+        await processSampler?.setProcessSamplingEnabled(enabled)
     }
 
     override public func receive(_ snapshot: CPUSnapshot) {

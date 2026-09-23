@@ -11,7 +11,7 @@ struct BatteryViewModelDetailTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         let chargeValue = viewModel.detailModel.stats.first { $0.label == "Charge" }?.value
         #expect(chargeValue == "75%")
@@ -29,7 +29,7 @@ struct BatteryViewModelDetailTests {
         ])
         let viewModel = BatteryViewModel(monitor: monitor, peripheralBatteryProvider: provider)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         await viewModel.refreshConnectedDeviceBatteries()
 
@@ -52,7 +52,7 @@ struct BatteryViewModelDetailTests {
             peripheralBatteryProvider: MockPeripheralBatteryProvider(batteries: [])
         )
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         await viewModel.refreshConnectedDeviceBatteries()
 
@@ -69,7 +69,7 @@ struct BatteryViewModelDetailTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.statusLabel == "2h 0m left")
     }

@@ -9,7 +9,7 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usage == 0.6)
     }
@@ -20,7 +20,7 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(!viewModel.availableLabel.isEmpty)
     }
@@ -43,7 +43,7 @@ struct DiskViewModelTests {
         let viewModel = DiskViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
@@ -58,7 +58,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.735, total: 1_000_000_000_000, available: 265_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.usageLabel == "73.5%")
     }
 
@@ -67,7 +67,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.5, total: 1_000_000_000_000, available: 500_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.availableLabel.contains("B"))
     }
 
@@ -76,7 +76,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.25, total: 1_000_000_000_000, available: 750_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.totalLabel.contains("B"))
     }
 
@@ -85,7 +85,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.5, total: 1_000_000_000_000, available: 500_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.totalBytes == 1_000_000_000_000)
         #expect(viewModel.availableBytes == 500_000_000_000)
     }
@@ -95,7 +95,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.6, total: 1_000_000_000_000, available: 400_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 3)
         #expect(viewModel.detailModel.stats[0].label == "Used")
         #expect(viewModel.detailModel.stats[1].label == "Free")
@@ -107,7 +107,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.65, total: 1_000_000_000_000, available: 350_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats[0].value == "65.0%")
     }
 
@@ -116,7 +116,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.4, total: 500_000_000_000, available: 300_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.title == "Disk")
         #expect(viewModel.detailModel.systemImage == "internaldrive")
         #expect(viewModel.detailModel.primaryValue == "40.0%")
@@ -127,7 +127,7 @@ struct DiskViewModelTests {
         monitor.snapshots = [DiskSnapshot(usage: 0.4, total: 1_000_000_000_000, available: 600_000_000_000)]
         let viewModel = DiskViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.subtitle?.hasSuffix(" free") == true)
     }
 }

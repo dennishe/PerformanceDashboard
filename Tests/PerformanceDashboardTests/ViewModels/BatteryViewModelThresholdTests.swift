@@ -12,7 +12,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.thresholdLevel == .inactive)
     }
 
@@ -24,7 +24,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.thresholdLevel == .normal)
     }
 
@@ -36,7 +36,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.thresholdLevel == .warning)
     }
 
@@ -48,7 +48,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.thresholdLevel == .critical)
     }
 
@@ -60,7 +60,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.history.count == Constants.historySamples)
         #expect(viewModel.history.last == 0.75)
     }
@@ -73,7 +73,7 @@ struct BatteryViewModelThresholdTests {
         )]
         let viewModel = BatteryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let chargeBeforeStop = viewModel.snapshot.chargeFraction
         viewModel.stop()
         await waitForAsyncUpdates()

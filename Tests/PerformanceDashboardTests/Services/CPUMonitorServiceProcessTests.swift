@@ -78,6 +78,7 @@ struct CPUMonitorServiceProcessTests {
             uptimeNanoseconds: tracker.nextTimestamp
         )
 
+        await service.setProcessSamplingEnabled(true)
         let first = await service.sample()
         let second = await service.sample()
 
@@ -87,6 +88,53 @@ struct CPUMonitorServiceProcessTests {
         #expect(second?.topProcesses.count == 1)
         #expect(second?.topProcesses.first?.name == "Render")
         #expect(second?.topProcesses.first?.fraction == 5.0)
+    }
+
+    @Test @MainActor func serviceSample_onlyScansProcessesWhileEnabled() async {
+        let tracker = SamplingTracker(
+            loads: [CPUUsageSample(loadInfo: [], usage: 0.25, cores: [])],
+            processBursts: [[ProcessTickSample(pid: 42, name: "Render", totalTicks: 100)],
+                            [ProcessTickSample(pid: 42, name: "Render", totalTicks: 220)]],
+            timestamps: [1_000, 2_000]
+        )
+        let service = CPUMonitorService(
+            sampleUsage: tracker.nextLoad(previous:),
+            sampleProcessInfo: tracker.nextProcessBurst,
+            uptimeNanoseconds: tracker.nextTimestamp
+        )
+
+        #expect(await service.sample()?.usage == 0.25)
+        #expect(tracker.processCallCount == 0)
+        await service.setProcessSamplingEnabled(true)
+        #expect(await service.sample()?.topProcesses.isEmpty == true)
+        #expect(await service.sample()?.topProcesses.first?.name == "Render")
+        await service.setProcessSamplingEnabled(false)
+        #expect(await service.sample()?.usage == 0.25)
+        #expect(tracker.processCallCount == 2)
+        await service.setProcessSamplingEnabled(true)
+        #expect(await service.sample()?.topProcesses.isEmpty == true)
+    }
+
+    @Test @MainActor func viewModel_controlsProcessSamplingOnItsMonitor() async {
+        let tracker = SamplingTracker(
+            loads: [CPUUsageSample(loadInfo: [], usage: 0.25, cores: [])],
+            processBursts: [[ProcessTickSample(pid: 42, name: "Render", totalTicks: 100)]],
+            timestamps: [1_000]
+        )
+        let service = CPUMonitorService(
+            sampleUsage: tracker.nextLoad(previous:),
+            sampleProcessInfo: tracker.nextProcessBurst,
+            uptimeNanoseconds: tracker.nextTimestamp
+        )
+        let viewModel = CPUViewModel(monitor: service)
+
+        #expect(await service.sample()?.usage == 0.25)
+        await viewModel.setProcessSamplingEnabled(true)
+        #expect(await service.sample()?.topProcesses.isEmpty == true)
+        #expect(tracker.processCallCount == 1)
+        await viewModel.setProcessSamplingEnabled(false)
+        #expect(await service.sample()?.usage == 0.25)
+        #expect(tracker.processCallCount == 1)
     }
 
     @Test func processFraction_usesDefaultTimebaseArguments() {
@@ -122,6 +170,8 @@ private final class SamplingTracker: @unchecked Sendable {
         defer { processIndex += 1 }
         return processBursts[min(processIndex, processBursts.count - 1)]
     }
+
+    var processCallCount: Int { processIndex }
 
     func nextTimestamp() -> UInt64 {
         defer { timestampIndex += 1 }

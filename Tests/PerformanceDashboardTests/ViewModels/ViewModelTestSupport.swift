@@ -3,11 +3,22 @@ import Foundation
 
 @MainActor
 final class SynchronousBatcher: UpdateScheduling {
+    private var completedUpdates = 0
+    private var updateWaiter: CheckedContinuation<Void, Never>?
+
     func enqueue(owner: AnyObject, update: @escaping () -> Void) {
         update()
+        completedUpdates += 1
+        updateWaiter?.resume()
+        updateWaiter = nil
     }
 
     func cancel(owner: AnyObject) {}
+
+    func waitForUpdate() async {
+        guard completedUpdates == 0 else { return }
+        await withCheckedContinuation { updateWaiter = $0 }
+    }
 }
 
 @MainActor

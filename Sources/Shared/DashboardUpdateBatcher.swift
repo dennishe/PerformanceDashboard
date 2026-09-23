@@ -33,6 +33,10 @@ public final class DashboardUpdateBatcher: UpdateScheduling {
         pendingUpdates.removeValue(forKey: ObjectIdentifier(owner))
     }
 
+    func waitUntilFlushed() async {
+        await flushTask?.value
+    }
+
     private func flush() {
         let updates = pendingUpdates.values.flatMap { $0 }
         pendingUpdates.removeAll()

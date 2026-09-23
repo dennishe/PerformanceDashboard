@@ -19,6 +19,10 @@ open class MonitorViewModelBase<Snapshot: MetricSnapshot> {
     private var monitorTask: Task<Void, Never>?
     private let _monitor: any MetricMonitorProtocol<Snapshot>
     private let batcher: any UpdateScheduling
+    #if DEBUG
+    @ObservationIgnored private var appliedUpdateCount = 0
+    @ObservationIgnored private var updateWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+    #endif
 
     public init(
         monitor: some MetricMonitorProtocol<Snapshot>,
@@ -60,7 +64,21 @@ open class MonitorViewModelBase<Snapshot: MetricSnapshot> {
 
     func refreshTileModel() {
         storedTileModel = makeTileModel()
+        #if DEBUG
+        appliedUpdateCount += 1
+        guard !updateWaiters.isEmpty else { return }
+        let ready = updateWaiters.filter { $0.0 <= appliedUpdateCount }
+        updateWaiters.removeAll { $0.0 <= appliedUpdateCount }
+        ready.forEach { $0.1.resume() }
+        #endif
     }
+
+    #if DEBUG
+    func waitForUpdates(atLeast count: Int = 1) async {
+        guard appliedUpdateCount < count else { return }
+        await withCheckedContinuation { updateWaiters.append((count, $0)) }
+    }
+    #endif
 
     /// Appends `value` to both the sparkline history and the extended detail history.
     func appendHistory(_ value: Double) {

@@ -9,7 +9,7 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.aneUsage == 0.25)
     }
@@ -20,7 +20,7 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usageLabel == "N/A")
     }
@@ -35,7 +35,7 @@ struct AcceleratorViewModelTests {
         let viewModel = AcceleratorViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let usageBeforeStop = viewModel.aneUsage
         viewModel.stop()
 
@@ -50,7 +50,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.45)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.usageLabel == "45.0%")
     }
 
@@ -59,7 +59,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.3)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 1)
         #expect(viewModel.detailModel.stats[0].label == "Utilisation")
         #expect(viewModel.detailModel.stats[0].value == "30.0%")
@@ -70,7 +70,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: nil)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.isEmpty)
     }
 
@@ -79,7 +79,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.5)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.title == "ANE")
         #expect(viewModel.detailModel.systemImage == "brain")
     }
@@ -89,7 +89,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: nil)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.gaugeValue == nil)
     }
 
@@ -98,7 +98,7 @@ struct AcceleratorViewModelTests {
         monitor.snapshots = [AcceleratorSnapshot(aneUsage: 0.7)]
         let viewModel = AcceleratorViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.gaugeValue == 0.7)
     }
 

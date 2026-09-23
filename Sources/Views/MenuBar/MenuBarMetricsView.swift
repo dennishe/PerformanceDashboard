@@ -28,7 +28,15 @@ struct MenuBarMetricsView: View {
             Divider().padding(.top, 4)
             footer
         }
-        .frame(width: 260)
+        .frame(width: 260, height: popoverHeight)
+    }
+
+    private var popoverHeight: CGFloat {
+        #if arch(arm64)
+        342
+        #else
+        308
+        #endif
     }
 
     // MARK: - Header

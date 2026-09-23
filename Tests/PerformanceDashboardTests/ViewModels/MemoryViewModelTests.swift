@@ -9,7 +9,7 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usage == 0.8)
         #expect(viewModel.totalBytes == 16_000_000_000)
@@ -22,7 +22,7 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
 
         #expect(viewModel.usageLabel == "50.0%")
     }
@@ -45,7 +45,7 @@ struct MemoryViewModelTests {
         let viewModel = MemoryViewModel(monitor: monitor)
 
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let usageBeforeStop = viewModel.usage
         viewModel.stop()
 
@@ -60,7 +60,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.5, total: 8_000_000_000, used: 4_000_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(!viewModel.usedLabel.isEmpty)
         #expect(viewModel.usedLabel.contains("B"))
     }
@@ -70,7 +70,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.5, total: 16_000_000_000, used: 8_000_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(!viewModel.totalLabel.isEmpty)
         #expect(viewModel.totalLabel.contains("B"))
     }
@@ -82,7 +82,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.75, total: 16_000_000_000, used: 12_000_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.stats.count == 3)
         #expect(viewModel.detailModel.stats[0].label == "Used")
         #expect(viewModel.detailModel.stats[1].label == "Total")
@@ -94,7 +94,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.55, total: 8_000_000_000, used: 4_400_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.detailModel.primaryValue == "55.0%")
         #expect(viewModel.detailModel.title == "Memory")
         #expect(viewModel.detailModel.systemImage == "memorychip")
@@ -107,7 +107,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.75, total: total, used: used)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         let freeStat = viewModel.detailModel.stats[2]
         #expect(!freeStat.value.isEmpty)
     }
@@ -117,7 +117,7 @@ struct MemoryViewModelTests {
         monitor.snapshots = [MemorySnapshot(usage: 0.6, total: 16_000_000_000, used: 9_600_000_000)]
         let viewModel = MemoryViewModel(monitor: monitor)
         viewModel.start()
-        await waitForAsyncUpdates()
+        await viewModel.waitForUpdates()
         #expect(viewModel.tileModel.gaugeValue == 0.6)
         #expect(viewModel.tileModel.value == "60.0%")
     }

@@ -37,6 +37,8 @@ struct DashboardView: View {
             guard detailSelection == .battery else { return }
             await services.battery.refreshConnectedDeviceBatteries()
         }
+        .task(id: detailSelection == .cpu) { await services.cpu.setProcessSamplingEnabled(detailSelection == .cpu) }
+        .onDisappear { Task { await services.cpu.setProcessSamplingEnabled(false) } }
     }
 
     // MARK: - Tile grid
