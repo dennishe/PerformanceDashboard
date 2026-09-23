@@ -169,6 +169,7 @@ struct CPUViewModelTests {
         await waitForAsyncUpdates()
 
         #expect(viewModel.detailModel.supplementarySections.count == 1)
+        #expect(viewModel.detailModel.supplementaryPlacement == .besideChart)
         #expect(viewModel.detailModel.supplementarySections[0].title == "Per-core")
         #expect(viewModel.detailModel.supplementarySections[0].items[0].label == "CPU 1")
         #expect(viewModel.detailModel.supplementarySections[0].items[0].subtitle == "Performance")

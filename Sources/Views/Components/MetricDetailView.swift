@@ -12,7 +12,7 @@ struct MetricDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             headerRow(model: model)
             chartSection(model: model)
-            if showsSupplementarySections {
+            if showsSupplementarySections && model.supplementaryPlacement == .belowChart {
                 supplementarySections(model.supplementarySections)
             }
             if !model.stats.isEmpty {
@@ -38,6 +38,7 @@ struct MetricDetailView: View {
 
     private var showsSupplementarySections: Bool {
         guard !model.supplementarySections.isEmpty else { return false }
+        if model.supplementaryPlacement == .besideChart { return true }
         guard let availableHeight else { return true }
         return availableHeight >= estimatedRequiredHeight
     }
@@ -90,12 +91,21 @@ struct MetricDetailView: View {
     private func chartSection(model: DetailModel) -> some View {
         let sliced = model.history.suffix(selectedRange.sampleCount)
         let layerColor = LayerColorComponents.threshold(model.thresholdLevel)
-        return SparklineView(
-            history: Array(sliced),
-            color: layerColor,
-            accessibilityLabel: model.title + " history",
-            accessibilityValue: model.primaryValue
-        )
+        return HStack(spacing: DashboardDesign.Spacing.regular) {
+            SparklineView(
+                history: Array(sliced),
+                color: layerColor,
+                accessibilityLabel: model.title + " history",
+                accessibilityValue: model.primaryValue
+            )
+            .frame(maxWidth: .infinity)
+            if showsSupplementarySections && model.supplementaryPlacement == .besideChart,
+               let section = model.supplementarySections.first {
+                Divider()
+                CoreDetailBarsView(section: section)
+                    .frame(maxWidth: .infinity)
+            }
+        }
         .frame(height: 160)
         .padding(.horizontal, DashboardDesign.Spacing.large)
         .padding(.top, DashboardDesign.Spacing.medium)
@@ -175,6 +185,7 @@ private enum TimeRange: CaseIterable {
                     .init(label: "CPU 2", subtitle: "Efficiency", value: "18.0%", gaugeValue: 0.18)
                 ])
             ],
+            supplementaryPlacement: .besideChart,
             stats: [
                 .init(label: "Usage", value: "42.3%")
             ]

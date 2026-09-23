@@ -7,13 +7,13 @@ protocol PMPSampling: AnyObject {
     func nextDelta() -> CFDictionary?
 }
 
-/// A single shared IOReport subscription to the `PMP / Energy Counters` group.
+/// A single shared IOReport subscription to PMP or its M5 Energy Model replacement.
 ///
 /// `AcceleratorMonitorService` and `MediaEngineMonitorService` both read from
-/// the same PMP group. Sharing one subscription halves the
+/// the same energy channels. Sharing one subscription halves the
 /// `IOReportCreateSamplesDelta` cost (a single channel-set iteration per tick
-/// instead of two). Narrowing to the `Energy Counters` subgroup further reduces
-/// the channel count to only the handful of energy channels (ANE, AVE, VDEC, …).
+/// instead of two). Narrowing PMP to `Energy Counters` or selecting only the
+/// accelerator/media channels from Energy Model keeps the sample small.
 @MonitorActor
 final class PMPSampler {
     static let shared = PMPSampler()
@@ -31,7 +31,19 @@ final class PMPSampler {
     /// Idempotent — safe to call from multiple consumers.
     func setUp() {
         guard ref == nil else { return }
-        guard let ch = IOReport.copyChannels(group: "PMP", subgroup: "Energy Counters"),
+        let pmp = IOReport.copyChannels(group: "PMP", subgroup: "Energy Counters")
+        let ch: CFMutableDictionary?
+        if let pmp, (pmp as NSDictionary)["IOReportChannels"] != nil {
+            ch = pmp
+        } else {
+            ch = IOReport.copyChannels(group: "Energy Model")
+            if let ch, let channels = (ch as NSDictionary)["IOReportChannels"] as? [NSDictionary] {
+                (ch as NSMutableDictionary)["IOReportChannels"] = channels.filter {
+                    ["ANE0", "AVE0", "VDEC", "VDEC0"].contains(IOReport.channelName($0 as CFDictionary) ?? "")
+                }
+            }
+        }
+        guard let ch, (ch as NSDictionary)["IOReportChannels"] != nil,
               let sub = IOReport.subscribe(channels: ch) else { return }
         ref = sub.ref
         channels = sub.subscribedChannels

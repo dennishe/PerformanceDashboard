@@ -2,6 +2,11 @@ import Foundation
 
 /// Snapshot of metric data for rendering the detail sheet.
 public struct DetailModel: Sendable {
+    public enum SupplementaryPlacement: Sendable {
+        case belowChart
+        case besideChart
+    }
+
     public struct SupplementaryItem: Sendable, Identifiable {
         public let id: String
         public let label: String
@@ -50,6 +55,7 @@ public struct DetailModel: Sendable {
     /// Up to 900 samples (≈ 15 min at 1 Hz). The detail view slices this per-range.
     public let history: [Double]
     public let supplementarySections: [SupplementarySection]
+    public let supplementaryPlacement: SupplementaryPlacement
     /// Secondary stat rows displayed below the chart.
     public let stats: [Stat]
 
@@ -60,6 +66,7 @@ public struct DetailModel: Sendable {
         thresholdLevel: ThresholdLevel,
         history: [Double],
         supplementarySections: [SupplementarySection] = [],
+        supplementaryPlacement: SupplementaryPlacement = .belowChart,
         stats: [Stat]
     ) {
         self.title = title
@@ -68,6 +75,7 @@ public struct DetailModel: Sendable {
         self.thresholdLevel = thresholdLevel
         self.history = history
         self.supplementarySections = supplementarySections
+        self.supplementaryPlacement = supplementaryPlacement
         self.stats = stats
     }
 }

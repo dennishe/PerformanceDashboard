@@ -4,6 +4,26 @@ import Foundation
 public struct PowerSnapshot: MetricSnapshot {
     /// Total system power in watts, or `nil` when unavailable.
     public let watts: Double?
+    public let components: [PowerComponent]
+
+    public init(watts: Double?) {
+        self.init(watts: watts, components: [])
+    }
+
+    public init(watts: Double?, components: [PowerComponent]) {
+        self.watts = watts
+        self.components = components
+    }
+}
+
+public struct PowerComponent: Sendable, Equatable {
+    public let name: String
+    public let watts: Double
+
+    public init(name: String, watts: Double) {
+        self.name = name
+        self.watts = watts
+    }
 }
 
 /// Monitors system power draw via a platform-specific `PowerStrategy`.
@@ -35,9 +55,9 @@ public final class PowerMonitorService: PollingMonitorBase<PowerSnapshot> {
         guard var strategy else {
             return PowerSnapshot(watts: nil)
         }
-        let watts = strategy.nextWatts()
+        let snapshot = strategy.nextSnapshot()
         self.strategy = strategy
-        return PowerSnapshot(watts: watts)
+        return snapshot
     }
 
     @MonitorActor

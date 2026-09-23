@@ -6,4 +6,11 @@ import Foundation
 protocol PowerStrategy: Sendable {
     /// Returns the latest system power draw in watts, or `nil` when unavailable.
     mutating func nextWatts() -> Double?
+    mutating func nextSnapshot() -> PowerSnapshot
+}
+
+extension PowerStrategy {
+    mutating func nextSnapshot() -> PowerSnapshot {
+        PowerSnapshot(watts: nextWatts())
+    }
 }

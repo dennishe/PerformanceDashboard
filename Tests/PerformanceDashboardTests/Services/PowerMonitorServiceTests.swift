@@ -53,6 +53,24 @@ struct PowerMonitorServiceTests {
         #expect(snapshot.watts == 250.0)
     }
 
+    #if arch(arm64)
+    @Test func energyModel_separatesCpuGpuAndOther_withoutCountingPerCoreChannels() {
+        let names = ["CPU Energy", "GPU Energy", "PCIe Port 0 Energy", "MCPU0_0"]
+        let descriptors = names.enumerated().compactMap {
+            EnergyChannelDescriptor.descriptor(name: $0.element, index: $0.offset)
+        }
+        let values: [Int64] = [4_000, 3_000_000_000, 500_000_000, 100_000]
+        let snapshot = EnergyChannelDescriptor.snapshot(from: descriptors.map { ($0, values[$0.index]) })
+
+        #expect(snapshot.watts == 7.5)
+        #expect(snapshot.components == [
+            PowerComponent(name: "CPU", watts: 4),
+            PowerComponent(name: "GPU", watts: 3),
+            PowerComponent(name: "Other", watts: 0.5)
+        ])
+    }
+    #endif
+
     // MARK: - Service lifecycle
 
     @Test @MainActor func service_conformsToProtocol() {

@@ -118,6 +118,18 @@ struct PowerViewModelTests {
         #expect(viewModel.detailModel.stats[0].value == "12.30 W")
     }
 
+    @Test func detailModel_showsReportedComponents() {
+        let viewModel = makeViewModel()
+        viewModel.receive(PowerSnapshot(watts: 12.3, components: [
+            PowerComponent(name: "CPU", watts: 7.2),
+            PowerComponent(name: "GPU", watts: 3.1),
+            PowerComponent(name: "Other", watts: 2.0)
+        ]))
+
+        #expect(viewModel.detailModel.stats.map(\.label) == ["Draw", "CPU", "GPU", "Other"])
+        #expect(viewModel.detailModel.stats.map(\.value) == ["12.30 W", "7.20 W", "3.10 W", "2.00 W"])
+    }
+
     @Test func detailModel_noStats_whenWattsNil() async {
         let viewModel = makeViewModel(watts: [nil])
         await startAndDrain(viewModel)

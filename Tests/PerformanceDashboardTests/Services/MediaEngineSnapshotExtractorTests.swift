@@ -4,6 +4,15 @@ import Testing
 
 #if arch(arm64)
 struct MediaEngineSnapshotExtractorTests {
+    @Test func extractor_acceptsM5EncoderWithoutInventingDecoder() {
+        let snapshot = MediaEngineSnapshotExtractor.snapshot(from: [
+            MediaEngineChannelSample(name: "AVE0", value: 7),
+            MediaEngineChannelSample(name: "MSR0", value: 9)
+        ])
+
+        #expect(snapshot == MediaEngineSnapshot(encodeMilliwatts: 7, decodeMilliwatts: nil))
+    }
+
     @Test func extractor_accumulatesEncodeAndDecodeChannels() {
         let snapshot = MediaEngineSnapshotExtractor.snapshot(from: [
             MediaEngineChannelSample(name: "AVE", value: 12),

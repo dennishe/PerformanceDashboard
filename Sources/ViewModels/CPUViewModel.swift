@@ -60,6 +60,7 @@ public final class CPUViewModel: MonitorViewModelBase<CPUSnapshot> {
             thresholdLevel: thresholdLevel,
             history: extendedHistory,
             supplementarySections: makeSupplementarySections(),
+            supplementaryPlacement: .besideChart,
             stats: stats
         )
     }

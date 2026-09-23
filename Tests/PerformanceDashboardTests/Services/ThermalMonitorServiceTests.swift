@@ -2,6 +2,12 @@ import Testing
 @testable import PerformanceDashboard
 
 struct ThermalMonitorServiceTests {
+    @Test func hidDieTemperature_usesHottestPlausibleReading() {
+        let temperature = HIDDieTemperatureReader.hottestValidTemperature([33, -9200, .nan, 126, 47])
+        #expect(temperature == 47)
+        #expect(HIDDieTemperatureReader.hottestValidTemperature([-9200, .infinity]) == nil)
+    }
+
     private func sp78Bytes(_ value: Double) -> [UInt8] {
         let raw = UInt16(value * 256)
         return [UInt8(raw >> 8), UInt8(raw & 0xFF)]

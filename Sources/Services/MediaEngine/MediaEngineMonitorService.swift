@@ -9,8 +9,8 @@ public struct MediaEngineSnapshot: MetricSnapshot {
 }
 
 /// Monitors the H.264/HEVC encode and decode engines via IOReport on Apple Silicon.
-/// The `AVE` (encoder) and `VDEC` (decoder) channels are in the `PMP / Energy Counters`
-/// IOReport group; values are millijoules per sample interval (≈ milliwatts at 1 s/poll).
+/// Uses `AVE`/`VDEC` on PMP and `AVE0` on M5 Energy Model (no decoder channel observed).
+/// Values are millijoules per sample interval (about milliwatts at 1 s/poll).
 public final class MediaEngineMonitorService: PollingMonitorBase<MediaEngineSnapshot> {
     #if arch(arm64)
     private let makeSampler: @MonitorActor @Sendable () -> any PMPSampling
@@ -100,8 +100,8 @@ enum MediaEngineSnapshotExtractor {
         for sample in samples {
             guard sample.value != Int64.min else { continue }
             switch sample.name {
-            case "AVE":  encode = encode == Int64.min ? sample.value : encode + sample.value
-            case "VDEC": decode = decode == Int64.min ? sample.value : decode + sample.value
+            case "AVE", "AVE0": encode = encode == Int64.min ? sample.value : encode + sample.value
+            case "VDEC", "VDEC0": decode = decode == Int64.min ? sample.value : decode + sample.value
             default: break
             }
         }

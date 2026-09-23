@@ -37,13 +37,17 @@ public final class PowerViewModel: MonitorViewModelBase<PowerSnapshot> {
     }
 
     public var detailModel: DetailModel {
-        DetailModel(
+        let total = watts.map { [DetailModel.Stat(label: "Draw", value: $0.wattsFormatted(precision: 2))] } ?? []
+        let components = lastSnapshot.components.map {
+            DetailModel.Stat(label: $0.name, value: $0.watts.wattsFormatted(precision: 2))
+        }
+        return DetailModel(
             title: "Power",
             systemImage: "bolt",
             primaryValue: wattsLabel,
             thresholdLevel: thresholdLevel,
             history: extendedHistory,
-            stats: watts.map { [.init(label: "Draw", value: $0.wattsFormatted(precision: 2))] } ?? []
+            stats: total + components
         )
     }
 }

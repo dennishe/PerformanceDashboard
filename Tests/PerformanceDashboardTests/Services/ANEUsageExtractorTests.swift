@@ -43,6 +43,15 @@ struct ANEUsageExtractorTests {
         #expect(second.maxDelta == 12)
     }
 
+    @Test func extractor_acceptsM5EnergyModelChannel() {
+        let result = ANEUsageExtractor.extract(
+            from: [ANEChannelSample(name: "ANE0", value: 5)],
+            currentMaxDelta: 10
+        )
+
+        #expect(result.usage == 0.5)
+    }
+
     @Test func extractor_snapshotFromDelta_usesFallbackLegendChannelAndSimpleValue() {
         let delta = [
             "IOReportChannels": [

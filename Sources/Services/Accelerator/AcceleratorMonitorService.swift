@@ -93,7 +93,7 @@ enum ANEUsageExtractor {
         var total: Int64 = 0
         var found = false
         for channel in samples {
-            guard channel.name == "ANE" else { continue }
+            guard channel.name == "ANE" || channel.name == "ANE0" else { continue }
             let raw = channel.value
             // INT64_MIN is the sentinel for "privileged / unavailable".
             guard raw != Int64.min, raw >= 0 else { continue }

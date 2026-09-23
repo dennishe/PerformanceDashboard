@@ -51,6 +51,7 @@ public struct ThermalSnapshot: MetricSnapshot {
 /// GPU sensor (`TG0D`) is typically only readable on Intel Macs.
 public final class ThermalMonitorService: PollingMonitorBase<ThermalSnapshot> {
     @MonitorActor private var smc: SMCBridge?
+    @MonitorActor private var dieReader: HIDDieTemperatureReader?
 
     @MonitorActor
     override public func setUp() {
@@ -61,11 +62,20 @@ public final class ThermalMonitorService: PollingMonitorBase<ThermalSnapshot> {
     override public func tearDown() {
         smc?.close()
         smc = nil
+        dieReader = nil
     }
 
     @MonitorActor
     override public func sample() async -> ThermalSnapshot? {
-        ThermalMonitorService.sample(smc)
+        let snapshot = ThermalMonitorService.sample(smc)
+        guard snapshot.cpuCelsius == nil else { return snapshot }
+        if dieReader == nil { dieReader = HIDDieTemperatureReader() }
+        guard let temperature = dieReader?.hottestDieCelsius() else { return snapshot }
+        return ThermalSnapshot(
+            cpuCelsius: temperature,
+            gpuCelsius: snapshot.gpuCelsius,
+            sensorReadings: snapshot.sensorReadings + [ThermalReading(label: "SoC Die", celsius: temperature)]
+        )
     }
 
     // MARK: - Sampling
